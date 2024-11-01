@@ -93,6 +93,7 @@ omit = [
     "tests/*",
     "examples/*",
     "docs/*",
+    "hgraph/*"
 ]
 
 [tool.coverage.paths]
