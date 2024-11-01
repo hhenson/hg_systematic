@@ -2,7 +2,7 @@
 name = "hg_systematic"
 version = "0.0.1"
 description = """ \
-A library and examples to show how HGraph can be used for systematic trading.
+A library and examples to show how HGraph can be used for systematic trading. \
 """
 readme = "README.md"
 license = "MIT"
@@ -23,11 +23,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 packages = [
-    { include = "hgraph", from = "src" },
+    { include = "hg_systematic", from = "src" },
 ]
 
 [tool.poetry.dependencies]
     python = ">=3.12"
+    hgraph = ">=0.3.26"
     frozendict = ">=2.3.10"
     sortedcontainers = ">=2.4.0"
     ordered-set = ">=4.1.0"
@@ -96,7 +97,7 @@ omit = [
 ]
 
 [tool.coverage.paths]
-hg = ["src/hgraph",]
+hg = ["src/hg_systematic",]
 tests = ["tests",]
 
 [tool.coverage.report]
@@ -109,7 +110,7 @@ exclude_lines = [
 
 [tool.black]
 line-length = 120
-target-version = ['py311']
+target-version = ['py312']
 unstable = true
 include = '\.pyi?$'
 # 'extend-exclude' excludes files or directories in addition to the defaults
