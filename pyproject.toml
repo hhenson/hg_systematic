@@ -86,15 +86,13 @@ markers = [
 
 # Configure coverage
 [tool.coverage.run]
-source_pkgs = ["hgraph",]
+source_pkgs = ["hg_systematic",]
 branch = true
 parallel = true
 omit = [
     "tests/*",
     "examples/*",
     "docs/*",
-    "src/hgraph/notebook/*",
-    "src/hgraph/debug/*"
 ]
 
 [tool.coverage.paths]
