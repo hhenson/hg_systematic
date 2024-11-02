@@ -7,6 +7,7 @@ from hg_oap.dates.dt_utils import date_tz_to_utc
 from hgraph import generator, TS, EvaluationEngineApi, graph, lag, delayed_binding, feedback, compute_node, \
     RECORDABLE_STATE, TimeSeriesSchema
 
+__all__ = ["white_noise_generator", "auto_regressive_generator"]
 
 @generator
 def white_noise_generator(
@@ -33,7 +34,9 @@ def white_noise_generator(
 class ARState(TimeSeriesSchema):
     previous_terms: TS[tuple[float,...]]
 
-@compute_node
+@compute_node(
+    requires=lambda m, s: len(s["initial_values"]) == (order:=s["order"]) and len(s["coefficients"]) == order+1
+)
 def auto_regressive_generator(
         white_noise: TS[float],
         order: int = 1,
