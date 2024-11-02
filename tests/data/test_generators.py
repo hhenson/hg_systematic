@@ -16,10 +16,10 @@ def test_white_noise_generator():
 def test_auto_regressive_generator():
 
     @graph
-    def g() -> TS[float]:
-        noise = white_noise_generator(frequency=MIN_TD)
+    def g(signal: TS[bool]) -> TS[float]:
+        noise = white_noise_generator(signal)
         return auto_regressive_generator(noise)
 
-    results = eval_node(g, __end_time__=MIN_ST + MIN_TD * 5)
+    results = eval_node(g, [True, True, True, True, True])
     print(results)
     assert len(results) == 5
