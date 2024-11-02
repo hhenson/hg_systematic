@@ -5,7 +5,10 @@ from hg_systematic.data.generators import white_noise_generator, auto_regressive
 
 
 def test_white_noise_generator():
-    results = eval_node(white_noise_generator, frequency=MIN_TD, __end_time__=MIN_ST + MIN_TD * 5)
+    @graph
+    def g(signal: TS[bool]) -> TS[float]:
+        return white_noise_generator(signal)
+    results = eval_node(g, [True, True, True, True, True])
     print(results)
     assert len(results) == 5
 

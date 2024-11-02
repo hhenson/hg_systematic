@@ -5,30 +5,41 @@ from zoneinfo import ZoneInfo
 import numpy as np
 from hg_oap.dates.dt_utils import date_tz_to_utc
 from hgraph import generator, TS, EvaluationEngineApi, graph, lag, delayed_binding, feedback, compute_node, \
-    RECORDABLE_STATE, TimeSeriesSchema
+    RECORDABLE_STATE, TimeSeriesSchema, STATE, SIGNAL
 
 __all__ = ["white_noise_generator", "auto_regressive_generator"]
 
-@generator
+@compute_node
 def white_noise_generator(
+        signal: SIGNAL,
         loc: float = 0.0,
         scale: float = 1.0,
-        frequency: timedelta = timedelta(days=1),
-        offset: timedelta = timedelta(),
-        timezone: str = None,
-        _api: EvaluationEngineApi = None
+        size: int = 1000,
+        _state: STATE = None
 ) -> TS[float]:
-    """Generates a stream of white noise with a regular frequency"""
-    size = math.ceil(((end := _api.end_time) - (start := _api.start_time)) / frequency) + 1
-    samples = iter(np.random.normal(loc, scale, size=size))
-    current = date_tz_to_utc(start.date(), ZoneInfo(timezone)) if timezone else datetime(start.year, start.month,
-                                                                                         start.day)
-    current += offset
-    while current < start:
-        current += frequency
-    while current <= end:
-        yield current, float(next(samples))
-        current += frequency
+    """
+    Generates a stream of white noise at each tick of the ``signal`` input.
+    The buffer will be initialised at start, and will be re-initialised if the number of ticks exceeds the buffer
+    ``size``.
+    The noise stream can now be generated based on any input signal, for example, a calendar ticking out business days.
+    """
+    out = _state.buffer[_state.ndx]
+    _state.ndx += 1
+    if size == _state.ndx:
+        _state.buffer = np.random.normal(loc, scale, size=size)
+        _state.ndx = 0
+    return out
+
+@white_noise_generator.start
+def white_noise_generator_start(
+        loc: float = 0.0,
+        scale: float = 1.0,
+        size: int = 1000,
+        _state: STATE = None
+):
+    _state.buffer = np.random.normal(loc, scale, size=size)
+    _state.ndx = 0
+
 
 
 class ARState(TimeSeriesSchema):
