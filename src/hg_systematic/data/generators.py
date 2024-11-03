@@ -1,13 +1,10 @@
-import math
-from datetime import timedelta, datetime
-from zoneinfo import ZoneInfo
+from random import random
 
 import numpy as np
-from hg_oap.dates.dt_utils import date_tz_to_utc
-from hgraph import generator, TS, EvaluationEngineApi, graph, lag, delayed_binding, feedback, compute_node, \
+from hgraph import TS, compute_node, \
     RECORDABLE_STATE, TimeSeriesSchema, STATE, SIGNAL
 
-__all__ = ["white_noise_generator", "auto_regressive_generator"]
+__all__ = ["white_noise_generator", "auto_regressive_generator", "random"]
 
 @compute_node
 def white_noise_generator(
@@ -70,3 +67,11 @@ def auto_regressive_generator(
 def autoregressive_generator_start(initial_values: tuple[float, ...], _state: RECORDABLE_STATE[ARState] = None):
     _state.previous_terms.apply_result(initial_values)
 
+
+
+@compute_node
+def random_(signal: SIGNAL) -> TS[float]:
+    """
+    Wrap the python random number generator.
+    """
+    return random()

@@ -53,7 +53,7 @@ jobs:
       - name: Install dependencies
         run: poetry install --all-extras
 
-      - name: Build hgraph
+      - name: Build hg_systematic
         run: poetry build
 
       - name: Run tests
