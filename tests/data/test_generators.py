@@ -17,8 +17,7 @@ def test_auto_regressive_generator():
 
     @graph
     def g(signal: TS[bool]) -> TS[float]:
-        noise = white_noise_generator(signal)
-        return auto_regressive_generator(noise)
+        return auto_regressive_generator(signal)
 
     results = eval_node(g, [True, True, True, True, True])
     print(results)

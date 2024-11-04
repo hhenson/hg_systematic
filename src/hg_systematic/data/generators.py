@@ -1,10 +1,12 @@
 from random import random
 
 import numpy as np
+from h11 import _state
 from hgraph import TS, compute_node, \
-    RECORDABLE_STATE, TimeSeriesSchema, STATE, SIGNAL
+    RECORDABLE_STATE, TimeSeriesSchema, STATE, SIGNAL, graph
 
 __all__ = ["white_noise_generator", "auto_regressive_generator", "random"]
+
 
 @compute_node
 def white_noise_generator(
@@ -27,6 +29,7 @@ def white_noise_generator(
         _state.ndx = 0
     return out
 
+
 @white_noise_generator.start
 def white_noise_generator_start(
         loc: float = 0.0005,
@@ -38,14 +41,44 @@ def white_noise_generator_start(
     _state.ndx = 0
 
 
+@graph
+def auto_regressive_generator(
+        signal: SIGNAL,
+        order: int = 1,
+        initial_values: tuple[float, ...] = (1.0,),
+        coefficients: tuple[float, ...] = (1.0, 0.5),
+        centre: float = 0.0005,
+        std_dev: float = 0.010,
+        size: int = 1000,
+) -> TS[float]:
+    """
+    An autoregressive generator.  This will generate a sample each time the ``signal`` ticks.
+    The generator takes the form of:
+
+    .. math::
+
+        r_{t} = \phi_{0} + \sum_{i=1}^{order} \phi_{i} r_{t-i} + a_{t-1}
+
+    where :math:`r_{t}` is the rate at time t, :math:`\phi_{i}` are the co-efficients and :math:`a_{t-1}` a stream of
+    white noise generated using a random normal distribution with centre set to ``centre`` and the standard deviation
+    set to ``std_dev``.
+
+    The ``size`` defines the number of samples to pre-generate (ot the white noise).
+
+    The ``order`` is the number of historical value terms in the autoregressive generator.
+    """
+    noise = white_noise_generator(signal, loc=centre, scale=std_dev, size=size)
+    return _auto_regressive_generator(noise, order, initial_values, coefficients)
+
 
 class ARState(TimeSeriesSchema):
-    previous_terms: TS[tuple[float,...]]
+    previous_terms: TS[tuple[float, ...]]
+
 
 @compute_node(
-    requires=lambda m, s: len(s["initial_values"]) == (order:=s["order"]) and len(s["coefficients"]) == order+1
+    requires=lambda m, s: len(s["initial_values"]) == (order := s["order"]) and len(s["coefficients"]) == order + 1
 )
-def auto_regressive_generator(
+def _auto_regressive_generator(
         white_noise: TS[float],
         order: int = 1,
         initial_values: tuple[float, ...] = (1.0,),
@@ -59,14 +92,14 @@ def auto_regressive_generator(
     """
     result = white_noise.value + coefficients[0]
     prev = _state.previous_terms.value
-    result += sum(coefficients[i+1] * prev[i] for i in range(order))
+    result += sum(coefficients[i + 1] * prev[i] for i in range(order))
     _state.previous_terms.apply_result((result,) + prev[1:])
     return result
 
-@auto_regressive_generator.start
+
+@_auto_regressive_generator.start
 def autoregressive_generator_start(initial_values: tuple[float, ...], _state: RECORDABLE_STATE[ARState] = None):
     _state.previous_terms.apply_result(initial_values)
-
 
 
 @compute_node
