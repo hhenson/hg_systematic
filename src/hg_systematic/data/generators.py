@@ -23,14 +23,14 @@ def white_noise_generator(
     out = _state.buffer[_state.ndx]
     _state.ndx += 1
     if size == _state.ndx:
-        _state.buffer = np.random.normal(loc, scale, size=size)
+        _state.buffer = np.random.Generator().normal(loc=loc, scale=scale, size=size)
         _state.ndx = 0
     return out
 
 @white_noise_generator.start
 def white_noise_generator_start(
-        loc: float = 0.0,
-        scale: float = 1.0,
+        loc: float = 0.0005,
+        scale: float = 0.010,
         size: int = 1000,
         _state: STATE = None
 ):
