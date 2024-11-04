@@ -1,7 +1,6 @@
 from random import random
 
 import numpy as np
-from h11 import _state
 from hgraph import TS, compute_node, \
     RECORDABLE_STATE, TimeSeriesSchema, STATE, SIGNAL, graph
 
