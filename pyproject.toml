@@ -28,7 +28,7 @@ packages = [
 
 [tool.poetry.dependencies]
     python = ">=3.12"
-    hgraph = ">=0.3.30"
+    hgraph = ">=0.3.31"
     hg_oap = ">=0.1.9"
     frozendict = ">=2.3.10"
     sortedcontainers = ">=2.4.0"
