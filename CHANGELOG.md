@@ -13,3 +13,7 @@ Version 0.0.2
 
 * First pass implementation of the power auto-correlation strategy in notebook format.
 
+Version 0.0.3
+-------------
+
+* Add "production" style code for strategy.
