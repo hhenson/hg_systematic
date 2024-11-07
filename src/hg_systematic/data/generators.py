@@ -6,6 +6,8 @@ from hgraph import TS, compute_node, \
 
 __all__ = ["white_noise_generator", "auto_regressive_generator", "random"]
 
+from numpy.random import PCG64
+
 
 @compute_node
 def white_noise_generator(
@@ -24,7 +26,7 @@ def white_noise_generator(
     out = _state.buffer[_state.ndx]
     _state.ndx += 1
     if size == _state.ndx:
-        _state.buffer = np.random.Generator().normal(loc=loc, scale=scale, size=size)
+        _state.buffer = np.random.Generator(PCG64()).normal(loc=loc, scale=scale, size=size)
         _state.ndx = 0
     return out
 
