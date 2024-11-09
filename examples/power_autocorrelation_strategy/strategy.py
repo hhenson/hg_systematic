@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from hg_oap.dates import WeekendCalendar
 from hg_oap.dates.date_services import business_days_from_calendar, business_days
@@ -79,7 +79,8 @@ if __name__ == '__main__':
 
     with GlobalState() as gs, MemoryDataFrameStorage() as ds, RecordReplayContext(RecordReplayEnum.RECORD):
         set_record_replay_model(DATA_FRAME_RECORD_REPLAY)
-        evaluate_graph(simulate_graph, GraphConfiguration())
+        evaluate_graph(simulate_graph, GraphConfiguration(start_time=datetime(1990, 1, 1),
+                                                          end_time=datetime(2020, 1, 1)))
         signal = ds.read_frame("power.signal::__out__")
         print(signal)
         pnl = ds.read_frame("power_strategy::pnl")
