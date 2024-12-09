@@ -1265,17 +1265,17 @@ testing = ["pytest", "pytest-benchmark"]
 
 [[package]]
 name = "polars"
-version = "1.12.0"
+version = "1.17.0"
 description = "Blazingly fast DataFrame library"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "polars-1.12.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:8f3c4e4e423c373dda07b4c8a7ff12aa02094b524767d0ca306b1eba67f2d99e"},
-    {file = "polars-1.12.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:aa6f9862f0cec6353243920d9b8d858c21ec8f25f91af203dea6ff91980e140d"},
-    {file = "polars-1.12.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:afb03647b5160737d2119532ee8ffe825de1d19d87f81bbbb005131786f7d59b"},
-    {file = "polars-1.12.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:ea96aba5eb3dab8f0e6abf05ab3fc2136b329261860ef8661d20f5456a2d78e0"},
-    {file = "polars-1.12.0-cp39-abi3-win_amd64.whl", hash = "sha256:a228a4b320a36d03a9ec9dfe7241b6d80a2f119b2dceb1da953166655e4cf43c"},
-    {file = "polars-1.12.0.tar.gz", hash = "sha256:fb5c92de1a8f7d0a3f923fe48ea89eb518bdf55315ae917012350fa072bd64f4"},
+    {file = "polars-1.17.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:616c93faaf6bbbdfbe6add3299d5baae2eabf8bc728c22d3d6582dabd25f5bfe"},
+    {file = "polars-1.17.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:444d432ab97d7c57ebba8fb05b3c616d4c3853d0ec181f6347317ab170719669"},
+    {file = "polars-1.17.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f8b7d41167c7f381baf9a44c4a7945db74435fde591960106dfceb0e4764a20a"},
+    {file = "polars-1.17.0-cp39-abi3-manylinux_2_24_aarch64.whl", hash = "sha256:fb800b7b7ae56ff4e62350aeed38c3ef82dc95fcffe99c2552fc40cd9965485b"},
+    {file = "polars-1.17.0-cp39-abi3-win_amd64.whl", hash = "sha256:e42847a813f9cfb969839e27cf9ab4c73b8c08a8729b764ec77f8efe0abd745f"},
+    {file = "polars-1.17.0.tar.gz", hash = "sha256:f9e9cc1cd1e31a21e521624f70c5c0277162c0f1937d48d35c356d53571aa20c"},
 ]
 
 [package.extras]
@@ -1286,7 +1286,7 @@ calamine = ["fastexcel (>=0.9)"]
 cloudpickle = ["cloudpickle"]
 connectorx = ["connectorx (>=0.3.2)"]
 database = ["nest-asyncio", "polars[adbc,connectorx,sqlalchemy]"]
-deltalake = ["deltalake (>=0.15.0)"]
+deltalake = ["deltalake (>=0.19.0)"]
 excel = ["polars[calamine,openpyxl,xlsx2csv,xlsxwriter]"]
 fsspec = ["fsspec"]
 gpu = ["cudf-polars-cu12"]
