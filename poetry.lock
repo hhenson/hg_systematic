@@ -627,13 +627,13 @@ test = ["objgraph", "psutil"]
 
 [[package]]
 name = "hg-oap"
-version = "0.1.10"
+version = "0.1.11"
 description = "A library to faciliate building order and pricing strategies"
 optional = false
 python-versions = ">=3.11"
 files = [
-    {file = "hg_oap-0.1.10-py3-none-any.whl", hash = "sha256:e07b342decb05e390b5567dccdf5ed590dc97cf2571529a75e74be3429576fca"},
-    {file = "hg_oap-0.1.10.tar.gz", hash = "sha256:9da6df67fe6b230cf37173e5b926f8b547a9702ad422087df899cee32a082822"},
+    {file = "hg_oap-0.1.11-py3-none-any.whl", hash = "sha256:ec247d9b157caaa7028dbc09abc704c5c4435dadff7d0db1abe12a39b13b5fbb"},
+    {file = "hg_oap-0.1.11.tar.gz", hash = "sha256:2f8060e95404816396b34d31ca5674ff5f4872f03018718c3e4bf2e81900f888"},
 ]
 
 [package.dependencies]
