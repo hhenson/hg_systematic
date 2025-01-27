@@ -1,13 +1,13 @@
 from datetime import date
 from enum import Enum
 
-from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path, TSB, operator
+from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path, TSB, operator, reference_service, \
+    compute_node, contains_
+
+__all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar"]
 
 
-__all__ = ["CalendarSchema", "calendar_for", "Periods", "business_days"]
-
-
-class CalendarSchema(TimeSeriesSchema):
+class HolidayCalendarSchema(TimeSeriesSchema):
     """
     The typical schema here is to track holidays and the start and end of the week. With the days between
     start of week and end of week being weekends or non-working days.
@@ -22,8 +22,11 @@ class CalendarSchema(TimeSeriesSchema):
     end_of_week: TS[int]
 
 
+HolidayCalendar = TSB[HolidayCalendarSchema]
+
+
 @subscription_service
-def calendar_for(symbol: TS[str], path: str = default_path) -> TSB[CalendarSchema]:
+def calendar_for(symbol: TS[str], path: str = default_path) -> HolidayCalendar:
     """
     The calendar service for a given symbol.
     """
@@ -37,9 +40,49 @@ class Periods(Enum):
 
 
 @operator
-def business_days(period: TS[Periods], calendar: TSB[CalendarSchema], dt: TS[date] = None) -> TS[tuple[date, ...]]:
+def business_days(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date] = None) -> TS[tuple[date, ...]]:
     """
     Identifies the business days for the given period, using the given calendar.
     This will be for the period containing the current engine clock or (if provided) the
     dt provided.
     """
+
+
+@reference_service
+def trade_date(path: str = default_path) -> TS[date]:
+    """
+    The current trade date for this process. The trade date is wired in to the outer graph and defines the sessions
+    trading date. Whilst it is possible to have multiple trading dates simultaneously, this not the general case.
+    When multiple trade dates are possible, the path would disambiguate the trading dates. Note that a trading date
+    does not imply that a contract being considered for trading would be tradable, just that if it were to trade we would
+    consider the trade date to be the date of record for the trade.
+    """
+
+
+@subscription_service
+def business_day(symbol: TS[str], path: str = default_path) -> TS[date]:
+    """
+    This will make use of the trade_date to track if the current trade_date is also a business day for the instrument.
+    This is slightly different to just walking the business days of a calendar, as if we are not trading and the instrument
+    is tradeable, we will still not produce a date.
+    """
+
+
+@compute_node(overloads=contains_)
+def _contains_dt_in_calendar(ts: HolidayCalendar, item: TS[date]) -> TS[bool]:
+    """
+    Determines if the date is within the holiday calendar, for us that means if we deem it a non-working day then
+    the date is within the calendar.
+    """
+    dt = item.value
+    dow = dt.weekday()
+    sow = ts.start_of_week.value
+    eow = ts.end_of_week.value
+    if eow < sow:
+        if eow < dow < sow:
+            return True # We are in a weekend
+    else:
+        if dow < sow  or eow < dow:
+            return  True # The other perspective for weekend
+    return dt in ts.holidays.value
+

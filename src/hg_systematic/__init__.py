@@ -1,1 +1,1 @@
-from hg_systematic._impl import *
+import hg_systematic.impl
