@@ -112,7 +112,6 @@ def test_index_weights():
             date(2025, 1, 14),
             date(2025, 1, 15),
         ],
-         __trace__=True
     ) == [
                None,
                fd({'CH25 Comdty': 0.25, 'HGH25 Comdty': 0.4, 'GCG25 Comdty': 0.2, 'CLH25 Comdty': 0.15}),
