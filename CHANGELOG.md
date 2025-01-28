@@ -18,8 +18,8 @@ Version 0.0.3
 
 * Add "production" style code for strategy.
 
-Version 0.0.4
--------------
+Version 0.0.4 (28-01-2025)
+--------------------------
 
 * Initial structure to support pricing and managing an index.
-
+* basic contract roll operators and logic.
