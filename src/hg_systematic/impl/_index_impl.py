@@ -1,7 +1,6 @@
 from typing import Mapping
 
-from hgraph import service_impl, set_service_output, const, TSD, TSS, TSL, TS, Size, get_service_inputs, map_, \
-    debug_print
+from hgraph import service_impl, set_service_output, const, TSD, TSS, TSL, TS, Size, get_service_inputs, map_
 
 from hg_systematic.operators import index_assets, index_composition
 from hg_systematic.operators._index import index_rolling_schedule, ROLLING_SCHEDULE

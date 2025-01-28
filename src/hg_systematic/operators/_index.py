@@ -1,10 +1,9 @@
 from datetime import date
 from enum import Enum
-from http.cookiejar import debug
 
-from hgraph import TSD, TS, subscription_service, default_path, TSS, TSL, Size, operator, SIZE, graph, map_, \
+from hgraph import TSD, TS, subscription_service, TSS, TSL, Size, operator, SIZE, graph, map_, \
     convert, switch_, if_then_else, sum_, merge, unpartition, index_of, const, DEFAULT, clone_type_var, \
-    TIME_SERIES_TYPE, month_of_year, year, format_, mul_, debug_print, nothing, len_, pass_through
+    TIME_SERIES_TYPE, month_of_year, year, format_, mul_, pass_through
 
 from hg_systematic.operators._calendar import calendar_for, HolidayCalendar, business_days, \
     Periods, month_code

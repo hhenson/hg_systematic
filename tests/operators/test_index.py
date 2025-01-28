@@ -1,8 +1,8 @@
-from datetime import date, datetime
+from datetime import date
 
 import pytest
 from frozendict import frozendict as fd
-from hgraph import SIZE, Size, graph, TSL, TS, TSD, const, register_service, default_path, debug_print
+from hgraph import SIZE, Size, graph, TSL, TS, TSD, const, register_service, default_path
 from hgraph.test import eval_node
 
 from hg_systematic.impl import trade_date_week_days, calendar_for_static, index_impl_const, \
