@@ -40,7 +40,7 @@ class Periods(Enum):
 
 
 @operator
-def business_days(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date] = None) -> TS[tuple[date, ...]]:
+def business_days(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date]) -> TS[tuple[date, ...]]:
     """
     Identifies the business days for the given period, using the given calendar.
     This will be for the period containing the current engine clock or (if provided) the
@@ -86,3 +86,18 @@ def _contains_dt_in_calendar(ts: HolidayCalendar, item: TS[date]) -> TS[bool]:
             return  True # The other perspective for weekend
     return dt in ts.holidays.value
 
+
+# Market-convention future month codes for each calendar month
+MONTH_CODES = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
+
+@compute_node
+def month_code(d: TS[int]) -> TS[str]:
+    # Return the month code corresponding to the month (as a date or a 1-based month number)
+    m = d.value - 1
+    return MONTH_CODES[m]
+
+
+@compute_node
+def month_from_code(code: TS[str]) -> TS[int]:
+    # Return a 1-based month number from a month code
+    return MONTH_CODES.index(code.value) + 1

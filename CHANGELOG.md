@@ -17,3 +17,9 @@ Version 0.0.3
 -------------
 
 * Add "production" style code for strategy.
+
+Version 0.0.4
+-------------
+
+* Initial structure to support pricing and managing an index.
+

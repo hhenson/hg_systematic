@@ -9,26 +9,15 @@ from hg_systematic.impl import trade_date_week_days, business_day_impl, calendar
 from hg_systematic.operators import business_days, Periods, HolidayCalendarSchema, business_day
 
 
-def test_business_days():
-    dt = date(2025, 1, 20)
-    eval_node(
-        business_days,
-        [Periods.Week],
-        [{"holidays": frozenset(), "start_of_week": 0, "end_of_week": 4}],
-        __start_time__=datetime(2025, 1, 23),
-        __end_time__=datetime(2025, 1, 23, 23, 59),
-    ) == [tuple(dt + timedelta(days=i) for i in range(7))]
-
-
 def test_business_days_with_dt():
     dt = date(2025, 1, 20)
-    eval_node(
+    assert eval_node(
         business_days,
         [Periods.Week],
         [{"holidays": frozenset(), "start_of_week": 0, "end_of_week": 4}],
         [dt, dt + timedelta(days=1), dt + timedelta(days=2), dt + timedelta(days=7)],
-    ) == [tuple(dt + timedelta(days=i) for i in range(7)), None, None,
-          tuple(dt + timedelta(days=7 + i) for i in range(7))]
+    ) == [tuple(dt + timedelta(days=i) for i in range(5)), None, None,
+          tuple(dt + timedelta(days=7 + i) for i in range(5))]
 
 
 @pytest.mark.parametrize(

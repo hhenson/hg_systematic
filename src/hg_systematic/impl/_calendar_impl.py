@@ -1,30 +1,19 @@
+import calendar as cal
 from datetime import date, timedelta, datetime
 
 from frozendict import frozendict as fd
-from hgraph import TS, TSB, compute_node, \
-    last_modified_date, graph, schedule, service_impl, default_path, contains_, if_true, sample, TSS, TSD, map_, not_, \
+from hgraph import TS, compute_node, \
+    graph, service_impl, default_path, contains_, if_true, sample, TSS, TSD, map_, not_, \
     EvaluationEngineApi, generator, const
 
-from hg_systematic.operators._calendar import Periods, HolidayCalendarSchema, business_days, business_day, calendar_for, \
+from hg_systematic.operators._calendar import Periods, business_days, business_day, calendar_for, \
     trade_date, HolidayCalendar
 
 __all__ = ["business_day_impl", "trade_date_week_days", "calendar_for_static"]
 
 
-@graph(overloads=business_days)
-def business_days_impl(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date] = None) -> TS[tuple[date, ...]]:
-    """
-    Identifies the business days for the given period, using the given calendar.
-    This will be for the period containing the current engine clock or (if provided) the
-    dt provided.
-    """
-    if dt is None:
-        dt = last_modified_date(schedule(delay=timedelta(days=1), initial_delay=False))
-    return _business_days(period, calendar, dt)
-
-
-@compute_node
-def _business_days(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date],
+@compute_node(overloads=business_days)
+def business_days_impl(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date],
                    _output: TS[tuple[date, ...]] = None) -> TS[tuple[date, ...]]:
     dt = dt.value
     if not period.modified and not calendar.modified and _output.valid and len(dts := _output.value) > 1:
@@ -35,18 +24,20 @@ def _business_days(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date],
     sow = calendar.start_of_week.value
     eow = calendar.end_of_week.value
     holidays = calendar.holidays.value
+    if holidays is None:
+        holidays = frozenset()
     period = period.value
-    weekends = {(sow + d) % 7 for d in range(1, (sow - eow) % 7 + 1)}
+    weekends = {(eow + d) % 7 for d in range(1, (sow - eow - 1) % 7 + 1)}
     if period == Periods.Week:
         dow = dt.weekday()
-        start_dt = dt - timedelta(days=7 + (sow - dow) % 7)
-        count = (eow - sow) % 7
+        start_dt = dt - timedelta(days=(dow - sow) if dow >= sow else (dow + 7 - sow))
+        count = 7 - len(weekends)
     elif period == Periods.Month:
         start_dt = dt.replace(day=1)
-        count = dt.monthrange(dt.year, dt.month)[1]
+        count = cal.monthrange(dt.year, dt.month)[1]
     elif period == Periods.Quarter:
         start_dt = dt.replace(month=(dt.month - 1) // 3 * 3 + 1, day=1)
-        count = sum(dt.monthrange(start_dt.year, start_dt.month + i)[1] for i in range(3))
+        count = sum(cal.monthrange(start_dt.year, start_dt.month + i)[1] for i in range(3))
     elif period == Periods.Year:
         start_dt = dt.replace(month=1, day=1)
         count = 366 if (dt.year % 4 == 0 and dt.year % 100 != 0) or (dt.year % 400 == 0) else 365
