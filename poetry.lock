@@ -637,14 +637,14 @@ holidays = ">=0.56"
 
 [[package]]
 name = "hgraph"
-version = "0.3.47"
+version = "0.3.48"
 description = "A functional reactive platform used to process time-series streams. Provides support for backtest (simulation) and realtime time-series processing. Using a forward propagation graph with a microtask scheduler for the runtime engine. "
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "hgraph-0.3.47-py3-none-any.whl", hash = "sha256:f799ec4f53d5f652c99354f0328734386563b14d67150b122693e9b8147e85ee"},
-    {file = "hgraph-0.3.47.tar.gz", hash = "sha256:9d8d997a9470bf25b09c1703d1ed3617c929b6dc9182c743018bc812d1dabc28"},
+    {file = "hgraph-0.3.48-py3-none-any.whl", hash = "sha256:e04a806c30b7fef8a1674f6332c18296bc9c26d8e69f0e1b9543329b2721bead"},
+    {file = "hgraph-0.3.48.tar.gz", hash = "sha256:043b4659eb1dc450bca4cfe60e5f8eb2f41e498f17504770c08ac661c1e4029b"},
 ]
 
 [package.dependencies]
@@ -1866,4 +1866,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12"
-content-hash = "e3c3dac390c32ab14fb9ed84a23dbc41f4ddeba10b46e78b81a9f03a50d3306b"
+content-hash = "52cb393d5012ff668aefeac332c2edce9847c29941d83cf0468c15dff2ec4c47"
