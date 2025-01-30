@@ -23,3 +23,8 @@ Version 0.0.4 (28-01-2025)
 
 * Initial structure to support pricing and managing an index.
 * basic contract roll operators and logic.
+
+Version 0.0.5 (30-01-2025)
+--------------------------
+
+* Update python version dependencies and added returns signature.
