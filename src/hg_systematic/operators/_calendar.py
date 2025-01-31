@@ -4,7 +4,8 @@ from enum import Enum
 from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path, TSB, operator, reference_service, \
     compute_node, contains_
 
-__all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar"]
+__all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar",
+           "month_code", "month_from_code", "MONTH_CODES"]
 
 
 class HolidayCalendarSchema(TimeSeriesSchema):
@@ -80,15 +81,16 @@ def _contains_dt_in_calendar(ts: HolidayCalendar, item: TS[date]) -> TS[bool]:
     eow = ts.end_of_week.value
     if eow < sow:
         if eow < dow < sow:
-            return True # We are in a weekend
+            return True  # We are in a weekend
     else:
-        if dow < sow  or eow < dow:
-            return  True # The other perspective for weekend
+        if dow < sow or eow < dow:
+            return True  # The other perspective for weekend
     return dt in ts.holidays.value
 
 
 # Market-convention future month codes for each calendar month
 MONTH_CODES = ["F", "G", "H", "J", "K", "M", "N", "Q", "U", "V", "X", "Z"]
+
 
 @compute_node
 def month_code(d: TS[int]) -> TS[str]:
