@@ -28,3 +28,9 @@ Version 0.0.5 (30-01-2025)
 --------------------------
 
 * Update python version dependencies and added returns signature.
+
+
+Version 0.0.6 (31-01-2025)
+--------------------------
+
+* Expose month code logic
