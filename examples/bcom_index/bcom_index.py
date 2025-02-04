@@ -46,8 +46,7 @@ from enum import Enum
 
 from hgraph import graph, TS, const, map_, Size, pass_through, reduce, add_, TSD, TSL, feedback, lag, index_of, \
     if_then_else, month_of_year, default, passive, component, TSB, ts_schema, union, div_, DivideByZero, SIZE, switch_, \
-    year
-from hgraph._impl._operators import format_
+    year, format_
 from pygments.unistring import combine
 
 from hg_systematic.operators import index_assets, index_composition, calendar_for, index_rolling_contracts, \

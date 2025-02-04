@@ -9,6 +9,7 @@ from hg_systematic.impl import trade_date_week_days, calendar_for_static, index_
     index_rolling_schedule_impl_const
 from hg_systematic.operators import index_rolling_weights, HolidayCalendar
 from hg_systematic.operators._index import _to_tsd, index_weights, index_rolling_contracts, DEFAULT_INDEX_PATH
+from examples.bcom_index.bcom_index import _bcom_rolling_contracts, _bcom_rolling_weights
 
 
 @pytest.mark.parametrize(
