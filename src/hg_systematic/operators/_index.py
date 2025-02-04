@@ -8,7 +8,7 @@ from hgraph import TSD, TS, subscription_service, TSS, TSL, Size, operator, SIZE
 from hg_systematic.operators._calendar import calendar_for, HolidayCalendar
 
 __all__ = ["INDEX_WEIGHTS", "index_composition", "index_assets", "index_rolling_contracts", "index_rolling_weights",
-           "index_weights", "DEFAULT_INDEX_PATH", "ContractMatchState",]
+           "index_weights", "DEFAULT_INDEX_PATH", "ContractMatchState", "index_rolling_schedule"]
 
 INDEX_WEIGHTS = TSD[str, TS[float]]
 

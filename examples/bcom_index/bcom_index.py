@@ -44,15 +44,14 @@ CIM1 = CIM2 on day after last day of Roll Period in January
 from datetime import date
 from enum import Enum
 
-from hgraph import graph, TS, const, map_, Size, pass_through, reduce, add_, TSD, TSL, feedback, lag, index_of, \
-    if_then_else, month_of_year, default, passive, component, TSB, ts_schema, union, div_, DivideByZero, SIZE, switch_, \
-    year, format_
-from pygments.unistring import combine
+from hg_oap.instruments.future import month_code
+from hgraph import graph, TS, const, map_, Size, pass_through, reduce, TSD, TSL, feedback, lag, index_of, \
+    if_then_else, month_of_year, passive, component, TSB, ts_schema, union, div_, DivideByZero, SIZE, switch_, \
+    year, format_, combine, lift
 
 from hg_systematic.operators import index_assets, index_composition, calendar_for, index_rolling_contracts, \
     business_day, index_rolling_weights, price_in_dollars, SETTLEMENT_PRICE, business_days, Periods, INDEX_WEIGHTS, \
-    HolidayCalendar, ContractMatchState, month_code
-from hg_systematic.operators._index import index_rolling_schedule
+    HolidayCalendar, ContractMatchState, index_rolling_schedule
 
 
 class BcomCalcState(Enum):
@@ -204,6 +203,6 @@ def _bcom_rolling_contracts(
     # Now we make a weak assumption that the contract format takes the form of:
     # <key><month in letter><2 digit year> Comdty
     return TSL[TS[str], Size[2]].from_ts(
-        format_("{}{}{:02} Comdty", symbol, month_code(r1_m), r1_y % 100),
-        format_("{}{}{:02} Comdty", symbol, month_code(r2_m), r2_y % 100)
+        format_("{}{}{:02} Comdty", symbol, lift(month_code, inputs={"d": TS[int]})(r1_m), r1_y % 100),
+        format_("{}{}{:02} Comdty", symbol, lift(month_code, inputs={"d": TS[int]})(r2_m), r2_y % 100)
     )
