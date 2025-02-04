@@ -45,6 +45,7 @@ packages = [
 #[tool.poetry.extras]
 #web = [
 #]
+yfinance = "==0.2.52"
 
 [tool.poetry.group.docs]
 optional = true
