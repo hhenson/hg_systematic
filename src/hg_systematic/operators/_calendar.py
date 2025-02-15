@@ -2,9 +2,10 @@ from datetime import date
 from enum import Enum
 
 from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path, TSB, operator, reference_service, \
-    compute_node, contains_
+    compute_node, contains_, graph, TIME_SERIES_TYPE, last_modified_date, sample, if_true, not_
 
-__all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar",]
+__all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar",
+           "filter_by_calendar"]
 
 
 class HolidayCalendarSchema(TimeSeriesSchema):
@@ -86,3 +87,9 @@ def _contains_dt_in_calendar(ts: HolidayCalendar, item: TS[date]) -> TS[bool]:
             return True  # The other perspective for weekend
     return dt in ts.holidays.value
 
+
+@graph
+def filter_by_calendar(ts: TIME_SERIES_TYPE, holidays: HolidayCalendar) -> TIME_SERIES_TYPE:
+    """Restrict values to be published only during working days"""
+    dt = last_modified_date(ts)
+    return sample(if_true(not_(contains_(holidays, dt))), ts)

@@ -28,7 +28,7 @@ packages = [
 
 [tool.poetry.dependencies]
     python = ">=3.11"
-    hgraph = ">=0.3.48"
+    hgraph = ">=0.3.56"
     hg_oap = ">=0.1.11"
     frozendict = ">=2.3.10"
     sortedcontainers = ">=2.4.0"
@@ -40,12 +40,13 @@ packages = [
     sphinx_rtd_theme = { version = ">=2.0.0", optional = true  }
     sphinx-autodoc-typehints = { version = ">=2.3.0", optional = true }
     sphinxcontrib-plantuml = { version = ">=0.30", optional = true }
-
+    importlib_resources = "*"
 
 #[tool.poetry.extras]
 #web = [
 #]
 yfinance = "==0.2.52"
+importlib-resources = "^6.5.2"
 
 [tool.poetry.group.docs]
 optional = true
@@ -78,7 +79,7 @@ pytest-xdist = "*"
 # Configure pytest
 [tool.pytest.ini_options]
 minversion = "7.4.3"
-addopts = "-n 4 -ra -q --dist=loadscope" # " --cov=hgraph --cov-report=term-missing --cov-report=xml"
+adopts = "-s" #addopts = "-n 4 -ra -q --dist=loadscope" # " --cov=hgraph --cov-report=term-missing --cov-report=xml"
 testpaths = [
     "tests",
 ]

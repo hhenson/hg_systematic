@@ -1,146 +1,286 @@
 from datetime import date
-from enum import Enum
+from typing import Callable, Generic
 
-from hgraph import TSD, TS, subscription_service, TSS, TSL, Size, operator, SIZE, graph, map_, \
-    convert, switch_, if_then_else, sum_, merge, unpartition, DEFAULT, clone_type_var, \
-    TIME_SERIES_TYPE, mul_, pass_through
+from hg_oap.instruments.future import month_code
+from hgraph import TSD, TS, Size, operator, SIZE, graph, map_, \
+    if_then_else, pass_through, TimeSeriesSchema, TSB, SCALAR, reduce, div_, \
+    DivideByZero, passive, union, flip, feedback, ts_schema, sample, lag, default, and_, dedup, component, explode, \
+    format_, lift
 
-from hg_systematic.operators._calendar import calendar_for, HolidayCalendar
+from hg_systematic.operators._calendar import business_day, calendar_for, HolidayCalendar, filter_by_calendar
+from hg_systematic.operators._price import price_in_dollars
 
-__all__ = ["INDEX_WEIGHTS", "index_composition", "index_assets", "index_rolling_contracts", "index_rolling_weights",
-           "index_weights", "DEFAULT_INDEX_PATH", "ContractMatchState", "index_rolling_schedule"]
+__all__ = [
+    "INDEX_ROLL_FLOAT", "INDEX_ROLL_STR", "index_composition", "index_rolling_contracts",
+    "index_rolling_weight", "symbol_is", "index_level", "roll_contracts_monthly"
+]
 
-INDEX_WEIGHTS = TSD[str, TS[float]]
+"""
+An attempt to describe index computations in a mostly generic way, for now we will constraint
+the solution to indices that roll from one underlyer to another (i.e. only two active underlyers for an asset
+at any one time)
+"""
 
-DEFAULT_INDEX_PATH = "index_default"
 
-
-# Describe the composition of an index
-
-@subscription_service
-def index_composition(symbol: TS[str], path: str = DEFAULT_INDEX_PATH) -> INDEX_WEIGHTS:
+class _IndexRollingOutput(TimeSeriesSchema, Generic[SCALAR]):
     """
-    The weights for the given index as identified by the symbol.
+    An output structure representing a floating point values for an operator. The keys are the assets making up the
+    index, the values represent the first and second futures involved in the roll. The values are aligned to the
+    contracts defined in ``index_rolling_contracts``.
     """
+    first: TSD[str, TS[SCALAR]]
+    second: TSD[str, TS[SCALAR]]
 
 
-@subscription_service
-def index_assets(symbol: TS[str], path: str = DEFAULT_INDEX_PATH) -> TSS[str]:
+INDEX_ROLL_FLOAT = TSB[_IndexRollingOutput[float]]
+INDEX_ROLL_STR = TSB[_IndexRollingOutput[str]]
+
+
+def symbol_is(symbol: str, sz: SIZE = Size[2]) -> Callable[[dict, dict], bool]:
     """
-    The set of assets defining the index. This is point-in-time.
-    """
-
-
-ROLLING_SCHEDULE = clone_type_var(TIME_SERIES_TYPE, "ROLLING_SCHEDULE")
-
-
-@subscription_service
-def index_rolling_schedule(symbol: TS[str],
-                           tp: type[ROLLING_SCHEDULE] = TSD[str, TSD[int, TSL[TS[int], Size[2]]]],
-                           path: str = DEFAULT_INDEX_PATH) -> DEFAULT[ROLLING_SCHEDULE]:
-    """
-    A rolling schedule for the index. The default shape of the schedule is the
-    assert symbol, followed by a dictionary keyed by month and then a tuple of
-    month and year offset.
-    symbol -> month (now) -> (month (contract), year offset)
-
-    This is suitable for monthly or less frequent rolling contracts, where the
-    interpretation would be that given the current month, what is the contract
-    that should be held at the start of the month.
-    """
-
-
-@operator
-def index_rolling_contracts(rule: str, symbol: TS[str], dt: TS[date], sz: type[DEFAULT[SIZE]] = Size[2]) -> TSL[
-    TS[str], SIZE]:
-    """
-    The current rolling contracts for given asset for the given index.
-    This lines up with the index_roll_weights.
-
-    The asset represents the base contract spec, the date orients the roll in time.
+    Used to match the ``requires`` rule in the ``overloads`` implementation
     For example:
 
-        (ZCZ23, ZCH24)
+    ::
 
-    Represents the corn future and the rolling pair for November 2023 in the BCOM index.
-    The next month the pair would be:
+        @graph(overloads=index_composition, requires=symbol_is("BCOM Index"))
+        def bcom_index_composition(symbol: str, dt: TS[date]) -> INDEX_ROLLING_OUTPUT:
+            ...
+    """
+    return lambda m, s: s["symbol"] == symbol
 
-        (ZCH24, ZCH24)
 
-    (i.e. we are not rolling this month)
-
-    The combination of the rolling rule, which allocates the weights to each pair and the actual
-    values of the pairs allows for simple rolling to be implemented.
+@operator
+def index_composition(symbol: str, dt: TS[date], calendar: HolidayCalendar) -> INDEX_ROLL_FLOAT:
+    """
+    The index composition for the given date for the given symbol. This composition is used
+    as the weighting to compute the level of the assets from the given contracts and their prices.
     """
 
 
 @operator
-def index_rolling_weights(
-        rule: str,
-        calendar: HolidayCalendar,
-        dt: TS[date],
-        sz: SIZE = Size[2]
-) -> TSL[TS[float], SIZE]:
+def index_rolling_weight(symbol: str, dt: TS[date], calendar: HolidayCalendar) -> TS[float]:
     """
-    The rule attribute is used to identify the rolling rule. The use would look like:
+    For a date what is the rolling weight between first and second contracts.
+    This is the rolling weight and not the asset weights. With 1.0 representing all
+    the weight on the first contract and 0.0 representing all the weight on the second.
+    This must align with the ``index_rolling_contracts`` determination of first and second contracts.
 
-    index_rolling_weights("BCOM", calendar_for("ZC"), dt)
+    It is useful to build a rolling weight using the ``if_cmp`` operator.
+    Consider:
 
-    This produces a time-series of weights describing the rate of switch from one contract to another.
+    ::
 
-    Where the contract type would be a time-series.
+        is_rolling: TS[CmpResult]
+        return if_cmp(is_rolling, 1.0, roll_value, 0.0)
+
+    Alternatively, this can be achieved using a switch:
+
+    ::
+
+        is_rolling: TS[CmpResult]
+        return switch_({
+            CmpResult.LT: lambda ...: 1.0,
+            CmpResult.EQ: lambda ...: ...,  # Compute rolling weight
+            CmpResult.GT: lambda ...: 0.0,
+        }, is_rolling, ...)
+    """
+
+
+@operator
+def index_rolling_contracts(symbol: str, dt: TS[date], calendar: HolidayCalendar) -> INDEX_ROLL_STR:
+    """
+    The first and second contracts for this rolling period.
+    For example, for a monthly rolling period, the first and second contracts could be:
+
+    ::
+        {
+            'ZC': {
+                'first': 'ZCZ23',
+                'second': 'ZCH24',
+            },
+            ...
+        }
+
+    Then, if there is no roll in the rolling period, it may take the form of:
+
+    ::
+
+        {
+            'ZC': {
+                'first': 'ZCH24',
+                'second': 'ZCH24',
+            },
+            ...
+        }
+
+    This would indicate a non-roll in this rolling period.
+
+    NOTE: The alignment of all rolling operators for a given instrument must be observed to get correct behaviour.
     """
 
 
 @graph
-def index_weights(symbol: TS[str], dt: TS[date], rolling_rule: str,
-                  rolling_size: type[SIZE] = Size[2]) -> INDEX_WEIGHTS:
-    assets = index_assets(symbol)
-    asset_weights = index_composition(symbol)
-    calendar = calendar_for(symbol)
-    rolling_contracts = map_(
-        lambda key, dt_: index_rolling_contracts(rolling_rule, key, dt_, sz=rolling_size), dt, __keys__=assets)
-    rolling_weights = map_(
-        lambda key, dt_, calendar_: index_rolling_weights(rolling_rule, calendar_, dt_, sz=rolling_size), dt,
-        pass_through(calendar), __keys__=assets)
-    index_weights = map_(lambda rw, aw: mul_(rw, aw), rolling_weights, asset_weights)
-    tsd_index_weights = map_(lambda rc, cw: _to_tsd(rc, cw), rolling_contracts, index_weights)
-    # The above is a map: asset->contract->weight, we want this to be a map: contract->weight, use unpartition.
-    weights = unpartition(tsd_index_weights)
-    return weights
-
-
-class ContractMatchState(Enum):
-    ALL_KEYS_MATCH = 1
-    LEFT_ONLY = 2
-    RIGHT_ONLY = 3
-    OTHERWISE = 4
-
-
-@graph(requires=lambda m, s: m[SIZE].py_type == Size[2])
-def _to_tsd(keys: TSL[TS[str], SIZE], values: TSL[TS[float], SIZE]) -> TSD[str, TS[float]]:
+def weighted_average_value(
+        weights: TSD[str, TS[float]],
+        contracts: TSD[str, TS[str]],
+        prices: TSD[str, TS[float]]
+) -> TS[float]:
     """
-    For now, we only consider processing a tuple with 2 keys and values.
-    This logic could be generalised, but for now we only need to deal with this scenario.
+    Compute the weighted average value for the given weights, contracts and prices.
     """
-    match = keys[0] == keys[1]
-    lhs = values[1] == 0.0
-    rhs = values[0] == 0.0
-    match_case = if_then_else(match, ContractMatchState.ALL_KEYS_MATCH,
-                              if_then_else(lhs, ContractMatchState.LEFT_ONLY,
-                                           if_then_else(rhs, ContractMatchState.RIGHT_ONLY, ContractMatchState.OTHERWISE)))
-    out = switch_(
-        {
-            ContractMatchState.ALL_KEYS_MATCH: lambda k, v: convert[TSD](k[0], sum_(v, 0.0)),
-            ContractMatchState.LEFT_ONLY: lambda k, v: convert[TSD](k[0], v[0]),
-            ContractMatchState.RIGHT_ONLY: lambda k, v: convert[TSD](k[1], v[1]),
-            ContractMatchState.OTHERWISE: lambda k, v: merge(convert[TSD](k[0], v[0]), convert[TSD](k[1], v[1]),
-                                                             disjoint=True),
-        },
-        match_case,
-        keys,
-        values
+    values = map_(lambda w, c, p: w * p[c], weights, contracts, pass_through(prices))
+    return reduce(lambda x, y: x + y, values, 0.0)
+
+
+_ComputeIndexLevelsOther = ts_schema(
+    new_period=TS[bool],
+    rolling_weight=TS[float],
+    level_prev=TS[float],
+    wav_first_prev=TS[float],
+    wav_second_prev=TS[float],
+)
+
+
+def compute_index_levels(
+        weights: INDEX_ROLL_FLOAT,
+        contracts: INDEX_ROLL_STR,
+        prices: TSD[str, TS[float]],
+        other: TSB[_ComputeIndexLevelsOther],
+        rounding_fn: Callable[[TS[float]], TS[float]] = None
+) -> TSB[ts_schema(level=TS[float], wav_first=TS[float], wav_second=TS[float])]:
+    # NOTE: We bundle up the single value ticks into a tsb to make recording
+    # more simplistic as it will group up the results into a single dataframe.
+    new_period = other.new_period
+    rolling_weight = other.rolling_weight
+    level_prev = other.level_prev
+    wav_first_prev = other.wav_first_prev
+    wav_second_prev = other.wav_second_prev
+    wav_first = weighted_average_value(weights.first, contracts.first, prices)
+    wav_second = weighted_average_value(weights.second, contracts.second, prices)
+    first_rw = rolling_weight
+    second_rw = 1.0 - rolling_weight
+
+    # If we are in the first day of the new period, the first previous is actually
+    # The second previous since we now consider the structure from second to
+    # now be the structure of first.
+    wav_first_prev = if_then_else(new_period, wav_second_prev, wav_first_prev)
+
+    # We mark the previous value contributions as passive to ensure that the feedback
+    # of these values does not compute a new value
+    value = passive(level_prev) * div_(
+        wav_first * first_rw + wav_second * second_rw,
+        passive(wav_first_prev * first_rw + wav_second_prev * second_rw),
+        DivideByZero.ONE
     )
-    return out
+    if rounding_fn:
+        value = rounding_fn(value)
+    return value
 
 
+@graph
+def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
+                rounding_fn: Callable[[TS[float]], TS[float]] = None) -> TS[float]:
+    dt = business_day(symbol)
+    calendar = calendar_for(symbol)
+
+    weights = index_composition(symbol, dt, calendar)
+    rolling_weight = index_rolling_weight(symbol, dt, calendar)
+    contracts = index_rolling_contracts(symbol, dt, calendar)
+
+    all_contracts = union(flip(contracts.first).key_set, flip(contracts.second).key_set)
+    prices = map_(lambda key, d, c: filter_by_calendar(price_in_dollars(key)), __keys__=all_contracts, d=dt, c=calendar)
+
+    level_fb = feedback(TS[float], initial_level)
+    wav_first_fb = feedback(TS[float], 0.0)
+    wav_second_fb = feedback(TS[float], 0.0)
+
+    # We have a new period if the weight was 0.0 and is now 1.0
+    # We default to the previous state being 0.0, this should not make
+    # a difference as we initialise the previous wavs with the same value
+    new_period = dedup(and_(
+        rolling_weight == 1.0,
+        default(lag(rolling_weight), 0.0) == 0.0
+    ))
+
+    # We don't wrap the function immediately and then delay until we know
+    # we want to record or not, if we do we wrap with component and set
+    # the recorded id to be the record string value. Allowing for named
+    # Recording if we want to support multiple instance of index level
+    # computation and record the results independently.
+    if record:
+        fn = component(compute_index_levels, recordable_id=record)
+    else:
+        fn = graph(compute_index_levels)
+
+    level_output = fn(
+        weights, contracts, prices,
+        TSB[_ComputeIndexLevelsOther].from_ts(
+            new_period=new_period, rolling_weight=rolling_weight, level_prev=level_fb(),
+            wav_first_prev=wav_first_fb(), wav_second_prev=wav_second_fb()
+        ),
+        rounding_fn=rounding_fn
+    )
+
+    # We want to ensure we only capture a level value when we are expecting a value.
+    # This ensures we don't accidentally compute a level we are not expecting.
+    # If we want indicative levels we could return a live copy of this as well, but
+    # the previous level should always be the official previous level.
+    level = sample(dt, level_output)
+
+    level_fb(level)
+    wav_first_fb(level_output.wav_first)
+    wav_second_fb(level_output.wav_second)
+
+    return level
+
+
+@graph
+def roll_contracts_monthly(
+        dt: TS[date],
+        roll_schedule: TSD[str, TSD[int, TS[tuple[int, int]]]],
+        format_str: TSD[str, TS[str]],
+        year_scale: TSD[str, TS[int]]
+) -> INDEX_ROLL_STR:
+    """
+    From the given date, will look up this month and next months' contracts.
+    The assumption is that by supplying a month letter and a year value (int)
+    (as scaled by the year_scale value) to the format_str, it is possible to compute the contract
+    name.
+    """
+    y1, m1, _ = explode(dt)
+    m2 = (m1 % 12) + 1
+    ro = m2 < m1
+    y2 = if_then_else(ro, y1+1, y1)
+
+    c1_m = map_(
+        _create_contract,
+        month=m1,
+        year=y1,
+        schedule=roll_schedule,
+        format_str=format_str,
+        year_scale=year_scale
+    )
+
+    c2_m = map_(
+        _create_contract,
+        month=m2,
+        year=y2,
+        schedule=roll_schedule,
+        format_str=format_str,
+        year_scale=year_scale
+    )
+
+    return INDEX_ROLL_STR.from_ts(first=c1_m, second=c2_m)
+
+
+@graph
+def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[int, int]]], format_str: TS[str], year_scale: TS[int]) -> TS[str]:
+    s = schedule[month]
+    m = s[0]
+    y = (year + s[1]) % year_scale
+    return format_(
+        format_str,
+        month=lift(month_code, inputs={"d": TS[int]})(m),
+        year=y
+    )

@@ -1,5 +1,6 @@
 import calendar as cal
 from datetime import date, timedelta, datetime
+from typing import Iterable
 
 from frozendict import frozendict as fd
 from hgraph import TS, compute_node, \
@@ -9,12 +10,13 @@ from hgraph import TS, compute_node, \
 from hg_systematic.operators._calendar import Periods, business_days, business_day, calendar_for, \
     trade_date, HolidayCalendar
 
-__all__ = ["business_day_impl", "trade_date_week_days", "calendar_for_static"]
+__all__ = ["business_day_impl", "trade_date_week_days", "calendar_for_static", "create_market_holidays",
+           "holiday_const"]
 
 
 @compute_node(overloads=business_days)
 def business_days_impl(period: TS[Periods], calendar: HolidayCalendar, dt: TS[date],
-                   _output: TS[tuple[date, ...]] = None) -> TS[tuple[date, ...]]:
+                       _output: TS[tuple[date, ...]] = None) -> TS[tuple[date, ...]]:
     dt = dt.value
     if not period.modified and not calendar.modified and _output.valid and len(dts := _output.value) > 1:
         # Check if the date is still within the bounds, if it is then no further work required
@@ -58,7 +60,7 @@ def business_day_impl(symbol: TSS[str], calendar_path: str = default_path, trade
 @graph
 def _business_day_impl(key: TS[str], calendar_path: str, trade_date_path: str) -> TS[date]:
     calendar = calendar_for(key, path=default_path if calendar_path == "" else calendar_path)
-    dt = trade_date(path=default_path if trade_date_path=="" else trade_date_path)
+    dt = trade_date(path=default_path if trade_date_path == "" else trade_date_path)
     return sample(if_true(not_(contains_(calendar.holidays, dt))), dt)
 
 
@@ -87,3 +89,19 @@ def calendar_for_static(symbol: TSS[str], holidays: fd[str, frozenset[date]], so
         holidays,
         __keys__=symbol
     )
+
+
+def create_market_holidays(countries: Iterable[str], start_date_time: datetime, end_date_time: datetime) -> frozenset[
+    date]:
+    """Uses the holidays package to generate out holidays for the country codes supplied"""
+    import holidays
+    out = set()
+    years = list(range(start_date_time.year, end_date_time.year + 1))
+    for ctry in countries:
+        out.update(holidays.country_holidays(ctry, years=years).keys())
+    return frozenset(out)
+
+
+def holiday_const(holidays: frozenset[date], sow: int = 0, eow: int = 4) -> HolidayCalendar:
+    """Light-weight helper for testing with holidays"""
+    return const(fd(holidays=holidays, start_of_week=sow, end_of_week=eow), tp=HolidayCalendar)
