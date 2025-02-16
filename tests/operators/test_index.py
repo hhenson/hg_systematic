@@ -1,14 +1,16 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 from frozendict import frozendict as fd
-from hgraph import SIZE, Size, graph, TSL, TS, TSD, const, register_service, default_path, debug_print
+from hgraph import SIZE, Size, graph, TSL, TS, TSD, const, register_service, default_path, debug_print, lift
 from hgraph.test import eval_node
 
-from examples.bcom_index.bcom_index import create_bcom_holidays
-from hg_systematic.impl import trade_date_week_days, calendar_for_static, holiday_const, create_market_holidays
-from hg_systematic.operators import index_rolling_weight, index_rolling_contracts, INDEX_ROLL_STR, index_composition
-
+from examples.bcom_index.bcom_index import create_bcom_holidays, load_sample_prices
+from hg_systematic.impl import trade_date_week_days, calendar_for_static, holiday_const, create_market_holidays, \
+    business_day_impl, price_in_dollars_static_impl
+from hg_systematic.operators import index_rolling_weight, index_rolling_contracts, INDEX_ROLL_STR, index_composition, \
+    index_level
+import polars as pl
 
 def test_bcom_rolling_rule():
     @graph
@@ -76,3 +78,26 @@ def test_index_weights():
                {0: 0.3334984, 1: 0.27352246},
                {0: 0.27352246}
            ]
+
+
+def test_index_level():
+    @graph
+    def g() -> TS[float]:
+        register_service(default_path, trade_date_week_days)
+        register_service(default_path, business_day_impl)
+        register_service(default_path, calendar_for_static,
+                         holidays=fd({"BCOM Index": create_bcom_holidays()}))
+        register_service(default_path, price_in_dollars_static_impl, prices=load_sample_prices())
+        return index_level(
+            "BCOM Index",
+            rounding_fn=lift(lambda x: round(x, 8), inputs={'x': TS[float]}, output=TS[float])
+        )
+
+    assert eval_node(
+        g,
+        __start_time__=datetime(2025, 1, 2),
+        __end_time__=datetime(2025, 1, 4),
+        __elide__=True
+    ) == [
+
+    ]

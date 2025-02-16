@@ -674,15 +674,15 @@ holidays = ">=0.56"
 
 [[package]]
 name = "hgraph"
-version = "0.3.56"
+version = "0.3.57"
 description = "A functional reactive platform used to process time-series streams. Provides support for backtest (simulation) and realtime time-series processing. Using a forward propagation graph with a microtask scheduler for the runtime engine. "
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 markers = "python_version == \"3.11\" or python_version >= \"3.12\""
 files = [
-    {file = "hgraph-0.3.56-py3-none-any.whl", hash = "sha256:c1c740f71f626e2b75875c1cc6f3fcbdab67022f50cddef19c47fdb6af503e27"},
-    {file = "hgraph-0.3.56.tar.gz", hash = "sha256:23ad1504014208b71330239bbd72747a1f50081d5658d876e2284c3a1a52be4d"},
+    {file = "hgraph-0.3.57-py3-none-any.whl", hash = "sha256:94a630e9ab9f1a294da847e2e7c716a2a1bd852445c790313ea210453358dde8"},
+    {file = "hgraph-0.3.57.tar.gz", hash = "sha256:1289563b53dca74aff9d61e5ca2fa325aae48c199a9ac4c66c3921c4edcbdab5"},
 ]
 
 [package.dependencies]
@@ -695,10 +695,6 @@ polars = ">=1.0"
 psutil = "*"
 pyarrow = ">=16.1.0"
 sortedcontainers = ">=2.4.0"
-sphinx = ">=7.4"
-sphinx-autodoc-typehints = ">=2.3.0"
-sphinx_rtd_theme = ">=2.0.0"
-sphinxcontrib-plantuml = ">=0.30"
 sqlalchemy = "*"
 typing-extensions = "*"
 
@@ -2347,4 +2343,4 @@ repair = ["scipy (>=1.6.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "1843d393bc4404b82ccb37ddc5f5914094e26025e0b58a15e2387b88a89a70d5"
+content-hash = "c1d8187c6df735143ee51b92d3c87113286d6a467ee4fc2a52e3923338fd7433"

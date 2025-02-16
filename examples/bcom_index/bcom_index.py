@@ -11,9 +11,9 @@ from hg_oap.instruments.future import month_from_code
 from importlib_resources import files, as_file
 import polars as pl
 from hgraph import graph, TS, const, TSD, index_of, if_then_else, switch_, lift, CmpResult, explode, register_service, \
-    default_path, cast_, debug_print
+    default_path, cast_, debug_print, Frame
 
-from hg_systematic.impl import calendar_for_static
+from hg_systematic.impl import calendar_for_static, StaticPriceSchema
 from hg_systematic.impl._calendar_impl import create_market_holidays
 from hg_systematic.operators import index_composition, index_rolling_contracts, \
     index_rolling_weight, business_days, Periods, \
@@ -86,3 +86,11 @@ def register_bcom_static_calendar():
     """
     register_service(default_path, calendar_for_static, holidays=fd(
         {"BCOM Index": create_bcom_holidays()}))
+
+
+def load_sample_prices() -> Frame[StaticPriceSchema]:
+    import examples.bcom_index
+    source = files(examples.bcom_index).joinpath("bcom_prices.csv")
+    with as_file(source) as resource_path:
+        df = pl.read_csv(resource_path)
+    return df.melt("Commodity", variable_name="date", value_name="price").cast({"date": date}).rename({"Commodity": "symbol"}).select("date", "symbol", "price").sort("date")

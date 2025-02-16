@@ -141,6 +141,7 @@ _ComputeIndexLevelsOther = ts_schema(
     wav_second_prev=TS[float],
 )
 
+_ComputeIndexLevelsReturn = ts_schema(level=TS[float], wav_first=TS[float], wav_second=TS[float])
 
 def compute_index_levels(
         weights: INDEX_ROLL_FLOAT,
@@ -148,7 +149,7 @@ def compute_index_levels(
         prices: TSD[str, TS[float]],
         other: TSB[_ComputeIndexLevelsOther],
         rounding_fn: Callable[[TS[float]], TS[float]] = None
-) -> TSB[ts_schema(level=TS[float], wav_first=TS[float], wav_second=TS[float])]:
+) -> TSB[_ComputeIndexLevelsReturn]:
     # NOTE: We bundle up the single value ticks into a tsb to make recording
     # more simplistic as it will group up the results into a single dataframe.
     new_period = other.new_period
@@ -175,7 +176,7 @@ def compute_index_levels(
     )
     if rounding_fn:
         value = rounding_fn(value)
-    return value
+    return TSB[_ComputeIndexLevelsReturn].from_ts(level=value, wav_first=wav_first, wav_second=wav_second)
 
 
 @graph
@@ -189,7 +190,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     contracts = index_rolling_contracts(symbol, dt, calendar)
 
     all_contracts = union(flip(contracts.first).key_set, flip(contracts.second).key_set)
-    prices = map_(lambda key, d, c: filter_by_calendar(price_in_dollars(key)), __keys__=all_contracts, d=dt, c=calendar)
+    prices = map_(lambda key, d, c: filter_by_calendar(price_in_dollars(key), c), __keys__=all_contracts, d=dt, c=calendar)
 
     level_fb = feedback(TS[float], initial_level)
     wav_first_fb = feedback(TS[float], 0.0)
@@ -200,7 +201,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     # a difference as we initialise the previous wavs with the same value
     new_period = dedup(and_(
         rolling_weight == 1.0,
-        default(lag(rolling_weight), 0.0) == 0.0
+        default(lag(rolling_weight, 1), 0.0) == 0.0
     ))
 
     # We don't wrap the function immediately and then delay until we know
@@ -226,7 +227,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     # This ensures we don't accidentally compute a level we are not expecting.
     # If we want indicative levels we could return a live copy of this as well, but
     # the previous level should always be the official previous level.
-    level = sample(dt, level_output)
+    level = sample(dt, level_output.level)
 
     level_fb(level)
     wav_first_fb(level_output.wav_first)
