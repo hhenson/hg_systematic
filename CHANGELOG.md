@@ -34,3 +34,9 @@ Version 0.0.6 (31-01-2025)
 --------------------------
 
 * Expose month code logic
+
+Version 0.0.7 (17-01-2025)
+--------------------------
+
+* Re-work index example code
+* Change the structure to make use of more operators for the index impl.
