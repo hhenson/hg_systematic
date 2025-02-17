@@ -148,7 +148,6 @@ def compute_index_levels(
         contracts: INDEX_ROLL_STR,
         prices: TSD[str, TS[float]],
         other: TSB[_ComputeIndexLevelsOther],
-        rounding_fn: Callable[[TS[float]], TS[float]] = None
 ) -> TSB[_ComputeIndexLevelsReturn]:
     # NOTE: We bundle up the single value ticks into a tsb to make recording
     # more simplistic as it will group up the results into a single dataframe.
@@ -174,8 +173,6 @@ def compute_index_levels(
         passive(wav_first_prev * first_rw + wav_second_prev * second_rw),
         DivideByZero.ONE
     )
-    if rounding_fn:
-        value = rounding_fn(value)
     return TSB[_ComputeIndexLevelsReturn].from_ts(level=value, wav_first=wav_first, wav_second=wav_second)
 
 
@@ -227,7 +224,10 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     # This ensures we don't accidentally compute a level we are not expecting.
     # If we want indicative levels we could return a live copy of this as well, but
     # the previous level should always be the official previous level.
-    level = sample(dt, level_output.level)
+    if rounding_fn:
+        level = sample(dt, rounding_fn(level_output.level))
+    else:
+        level = sample(dt, level_output.level)
 
     level_fb(level)
     wav_first_fb(level_output.wav_first)
