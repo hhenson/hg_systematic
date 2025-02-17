@@ -216,8 +216,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
         TSB[_ComputeIndexLevelsOther].from_ts(
             new_period=new_period, rolling_weight=rolling_weight, level_prev=level_fb(),
             wav_first_prev=wav_first_fb(), wav_second_prev=wav_second_fb()
-        ),
-        rounding_fn=rounding_fn
+        )
     )
 
     # We want to ensure we only capture a level value when we are expecting a value.
