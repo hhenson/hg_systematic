@@ -5,7 +5,7 @@ from hg_oap.instruments.future import month_code
 from hgraph import TSD, TS, Size, operator, SIZE, graph, map_, \
     if_then_else, pass_through, TimeSeriesSchema, TSB, SCALAR, reduce, div_, \
     DivideByZero, passive, union, flip, feedback, ts_schema, sample, lag, default, and_, dedup, component, explode, \
-    format_, lift
+    format_, lift, CompoundScalar, compute_node, STATE
 
 from hg_systematic.operators._calendar import business_day, calendar_for, HolidayCalendar, filter_by_calendar
 from hg_systematic.operators._price import price_in_dollars
@@ -143,6 +143,7 @@ _ComputeIndexLevelsOther = ts_schema(
 
 _ComputeIndexLevelsReturn = ts_schema(level=TS[float], wav_first=TS[float], wav_second=TS[float])
 
+
 def compute_index_levels(
         weights_first: TSD[str, TS[float]],
         weights_second: TSD[str, TS[float]],
@@ -189,7 +190,8 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     contracts = index_rolling_contracts(symbol, dt, calendar)
 
     all_contracts = union(flip(contracts.first).key_set, flip(contracts.second).key_set)
-    prices = map_(lambda key, d, c: filter_by_calendar(price_in_dollars(key), c), __keys__=all_contracts, d=dt, c=calendar)
+    prices = map_(lambda key, d, c: filter_by_calendar(price_in_dollars(key), c), __keys__=all_contracts, d=dt,
+                  c=calendar)
 
     level_fb = feedback(TS[float], initial_level)
     wav_first_fb = feedback(TS[float], 0.0)
@@ -198,10 +200,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     # We have a new period if the weight was 0.0 and is now 1.0
     # We default to the previous state being 0.0, this should not make
     # a difference as we initialise the previous wavs with the same value
-    new_period = dedup(and_(
-        rolling_weight == 1.0,
-        default(lag(rolling_weight, 1), 0.0) == 0.0
-    ))
+    new_period = _new_period(rolling_weight, dt)
 
     # We don't wrap the function immediately and then delay until we know
     # we want to record or not, if we do we wrap with component and set
@@ -253,7 +252,7 @@ def roll_contracts_monthly(
     y1, m1, _ = explode(dt)
     m2 = (m1 % 12) + 1
     ro = m2 < m1
-    y2 = if_then_else(ro, y1+1, y1)
+    y2 = if_then_else(ro, y1 + 1, y1)
 
     c1_m = map_(
         _create_contract,
@@ -277,7 +276,8 @@ def roll_contracts_monthly(
 
 
 @graph
-def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[int, int]]], format_str: TS[str], year_scale: TS[int]) -> TS[str]:
+def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[int, int]]], format_str: TS[str],
+                     year_scale: TS[int]) -> TS[str]:
     s = schedule[month]
     m = s[0]
     y = (year + s[1]) % year_scale
@@ -286,3 +286,21 @@ def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[
         month=lift(month_code, inputs={"d": TS[int]})(m),
         year=y
     )
+
+
+class _NewPeriodState(CompoundScalar):
+    last_weight: float = 1.0
+
+
+@compute_node
+def _new_period(rolling_weight: TS[float], dt: TS[date], _state: STATE[_NewPeriodState], _output: TS[bool]) -> TS[bool]:
+    """
+    This should tick True when the rolling weight goes from 0.0 to 1.0, otherwise this ticks false when either the
+    rolling_weight of the dt ticks and the value of the output is True. This should not duplicate True or False values.
+    """
+    v = _state.last_weight
+    if rolling_weight.modified:
+        _state.last_weight = (rw :=rolling_weight.value)
+        return v == 0.0 and rw == 1.0
+    if not _output.valid or _output.value:
+        return False
