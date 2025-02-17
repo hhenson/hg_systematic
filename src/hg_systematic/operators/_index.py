@@ -301,6 +301,7 @@ def _new_period(rolling_weight: TS[float], dt: TS[date], _state: STATE[_NewPerio
     v = _state.last_weight
     if rolling_weight.modified:
         _state.last_weight = (rw :=rolling_weight.value)
-        return v == 0.0 and rw == 1.0
+        if v == 0.0 and rw == 1.0:
+            return True
     if not _output.valid or _output.value:
         return False
