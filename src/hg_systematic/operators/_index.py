@@ -144,8 +144,10 @@ _ComputeIndexLevelsOther = ts_schema(
 _ComputeIndexLevelsReturn = ts_schema(level=TS[float], wav_first=TS[float], wav_second=TS[float])
 
 def compute_index_levels(
-        weights: INDEX_ROLL_FLOAT,
-        contracts: INDEX_ROLL_STR,
+        weights_first: TSD[str, TS[float]],
+        weights_second: TSD[str, TS[float]],
+        contracts_first: TSD[str, TS[str]],
+        contracts_second: TSD[str, TS[str]],
         prices: TSD[str, TS[float]],
         other: TSB[_ComputeIndexLevelsOther],
 ) -> TSB[_ComputeIndexLevelsReturn]:
@@ -156,8 +158,8 @@ def compute_index_levels(
     level_prev = other.level_prev
     wav_first_prev = other.wav_first_prev
     wav_second_prev = other.wav_second_prev
-    wav_first = weighted_average_value(weights.first, contracts.first, prices)
-    wav_second = weighted_average_value(weights.second, contracts.second, prices)
+    wav_first = weighted_average_value(weights_first, contracts_first, prices)
+    wav_second = weighted_average_value(weights_second, contracts_second, prices)
     first_rw = rolling_weight
     second_rw = 1.0 - rolling_weight
 
@@ -212,7 +214,7 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
         fn = graph(compute_index_levels)
 
     level_output = fn(
-        weights, contracts, prices,
+        weights.first, weights.second, contracts.first, contracts.second, prices,
         TSB[_ComputeIndexLevelsOther].from_ts(
             new_period=new_period, rolling_weight=rolling_weight, level_prev=level_fb(),
             wav_first_prev=wav_first_fb(), wav_second_prev=wav_second_fb()
