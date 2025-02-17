@@ -35,7 +35,7 @@ Version 0.0.6 (31-01-2025)
 
 * Expose month code logic
 
-Version 0.0.7 (17-01-2025)
+Version 0.0.8 (17-01-2025)
 --------------------------
 
 * Re-work index example code
