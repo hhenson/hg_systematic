@@ -45,3 +45,8 @@ Version 0.0.9 (17-01-2025)
 --------------------------
 
 * Move rounding out of component
+
+Version 0.0.10 (17-01-2025)
+---------------------------
+
+* Fix new_period logic
