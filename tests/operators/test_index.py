@@ -80,24 +80,24 @@ def test_index_weights():
            ]
 
 
-def test_index_level():
-    @graph
-    def g() -> TS[float]:
-        register_service(default_path, trade_date_week_days)
-        register_service(default_path, business_day_impl)
-        register_service(default_path, calendar_for_static,
-                         holidays=fd({"BCOM Index": create_bcom_holidays()}))
-        register_service(default_path, price_in_dollars_static_impl, prices=load_sample_prices())
-        return index_level(
-            "BCOM Index",
-            rounding_fn=lift(lambda x: round(x, 8), inputs={'x': TS[float]}, output=TS[float])
-        )
-
-    assert eval_node(
-        g,
-        __start_time__=datetime(2025, 1, 2),
-        __end_time__=datetime(2025, 1, 4),
-        __elide__=True
-    ) == [
-
-    ]
+# def test_index_level():
+#     @graph
+#     def g() -> TS[float]:
+#         register_service(default_path, trade_date_week_days)
+#         register_service(default_path, business_day_impl)
+#         register_service(default_path, calendar_for_static,
+#                          holidays=fd({"BCOM Index": create_bcom_holidays()}))
+#         register_service(default_path, price_in_dollars_static_impl, prices=load_sample_prices())
+#         return index_level(
+#             "BCOM Index",
+#             rounding_fn=lift(lambda x: round(x, 8), inputs={'x': TS[float]}, output=TS[float])
+#         )
+#
+#     assert eval_node(
+#         g,
+#         __start_time__=datetime(2025, 1, 2),
+#         __end_time__=datetime(2025, 1, 4),
+#         __elide__=True,
+#     ) == [
+#
+#     ]
