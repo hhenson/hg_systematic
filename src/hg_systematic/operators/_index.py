@@ -293,7 +293,7 @@ class _NewPeriodState(CompoundScalar):
 
 
 @compute_node
-def _new_period(rolling_weight: TS[float], dt: TS[date], _state: STATE[_NewPeriodState], _output: TS[bool]) -> TS[bool]:
+def _new_period(rolling_weight: TS[float], dt: TS[date], _state: STATE[_NewPeriodState] = None, _output: TS[bool] = None) -> TS[bool]:
     """
     This should tick True when the rolling weight goes from 0.0 to 1.0, otherwise this ticks false when either the
     rolling_weight of the dt ticks and the value of the output is True. This should not duplicate True or False values.
