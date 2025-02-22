@@ -25,12 +25,14 @@ def index_rolling_weights_bcom(symbol: str, dt: TS[date], calendar: HolidayCalen
     days_of_month = business_days(Periods.Month, calendar, dt)
     day_index = index_of(days_of_month, dt) + 1
     is_rolling = if_then_else(day_index < 6, CmpResult.LT, if_then_else(day_index > 9, CmpResult.GT, CmpResult.EQ))
-    return switch_({
-        CmpResult.LT: lambda d: const(1.0),
-        CmpResult.EQ: lambda d: lift(lambda x: round(x, 1), inputs={"x": TS[float]}, output=TS[float])((10 - d) * .2),
-        CmpResult.GT: lambda d: const(0.0),
-    },
+    return switch_(
         is_rolling,
+        {
+            CmpResult.LT: lambda d: const(1.0),
+            CmpResult.EQ: lambda d: lift(lambda x: round(x, 1), inputs={"x": TS[float]}, output=TS[float])(
+                (10 - d) * .2),
+            CmpResult.GT: lambda d: const(0.0),
+        },
         cast_(float, day_index),
     )
 
@@ -93,4 +95,5 @@ def load_sample_prices() -> Frame[StaticPriceSchema]:
     source = files(examples.bcom_index).joinpath("bcom_prices.csv")
     with as_file(source) as resource_path:
         df = pl.read_csv(resource_path)
-    return df.melt("Commodity", variable_name="date", value_name="price").cast({"date": date}).rename({"Commodity": "symbol"}).select("date", "symbol", "price").sort("date")
+    return df.melt("Commodity", variable_name="date", value_name="price").cast({"date": date}).rename(
+        {"Commodity": "symbol"}).select("date", "symbol", "price").sort("date")

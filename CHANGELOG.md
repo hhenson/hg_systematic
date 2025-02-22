@@ -55,3 +55,8 @@ Version 0.0.11 (18-01-2025)
 ---------------------------
 
 * Small fixes
+
+Version 0.0.12 (22-02-2025)
+---------------------------
+
+* Update to hgraph 0.4.0 and update to new switch_ signature

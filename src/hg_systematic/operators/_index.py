@@ -79,11 +79,13 @@ def index_rolling_weight(symbol: str, dt: TS[date], calendar: HolidayCalendar) -
     ::
 
         is_rolling: TS[CmpResult]
-        return switch_({
-            CmpResult.LT: lambda ...: 1.0,
-            CmpResult.EQ: lambda ...: ...,  # Compute rolling weight
-            CmpResult.GT: lambda ...: 0.0,
-        }, is_rolling, ...)
+        return switch_(
+            is_rolling,
+            {
+                CmpResult.LT: lambda ...: 1.0,
+                CmpResult.EQ: lambda ...: ...,  # Compute rolling weight
+                CmpResult.GT: lambda ...: 0.0,
+            },  ...)
     """
 
 
