@@ -60,3 +60,8 @@ Version 0.0.12 (22-02-2025)
 ---------------------------
 
 * Update to hgraph 0.4.0 and update to new switch_ signature
+
+Version 0.0.13 (25-02-2025)
+---------------------------
+
+* Cleanups to index infrastructure in preparation for a new index computation approach
