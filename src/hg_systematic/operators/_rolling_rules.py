@@ -7,11 +7,13 @@ from hgraph import TimeSeriesSchema, TS, compute_node, cmp_, TSB, CmpResult
 class MonthlyRollingRange(TimeSeriesSchema):
     start: TS[int]
     end: TS[int]
-    first_day: TS[int]  # This is the same as start when start is a positive value, and is the day index of the previous month when negative
+    first_day: TS[int]  # This is the same as start when start is a positive value, and is the day index of the
+    # previous month when negative
 
 
 @compute_node(overloads=cmp_)
-def cmp_monthly_rolling_range(lhs: TS[int], rhs: TSB[MonthlyRollingRange]) -> TS[CmpResult]:
+def cmp_monthly_rolling_range(lhs: TS[int], rhs: TSB[MonthlyRollingRange], _output: TS[CmpResult] = None) \
+        -> TS[CmpResult]:
     """
     Determines if the day index is in the range of the monthly rolling range.
     We only map to GT when day_index == end. When we are not in the range, we otherwise map to LT.
@@ -22,16 +24,13 @@ def cmp_monthly_rolling_range(lhs: TS[int], rhs: TSB[MonthlyRollingRange]) -> TS
     end = rhs.end.value
 
     if day_index == end:
-        return CmpResult.GT
-    if start < 0:
-        if day_index >= first_day or day_index < end:
-            return CmpResult.EQ
-        else:
-            return CmpResult.LT
+        out = CmpResult.GT
+    elif (start < 0 and (day_index >= first_day or day_index < end)) or \
+            (start >= 0 and (day_index >= start and day_index < end)):
+        out = CmpResult.EQ
     else:
-        if day_index >= start and day_index < end:
-            return CmpResult.EQ
-        else:
-            return CmpResult.LT
+        out = CmpResult.LT
+    if _output.valid and _output.value == out:
+        return
 
-
+    return out

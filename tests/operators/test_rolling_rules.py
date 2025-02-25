@@ -17,5 +17,5 @@ def test_cmp_monthly_rolling_range():
     ]
 
     assert eval_node(g, [17, 18, 22, 2, 3, 4], [-4], [3], [18]) == [
-        CmpResult.LT, CmpResult.EQ, CmpResult.EQ, CmpResult.EQ, CmpResult.GT, CmpResult.LT
+        CmpResult.LT, CmpResult.EQ, None, None, CmpResult.GT, CmpResult.LT
     ]
