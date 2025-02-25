@@ -5,8 +5,9 @@ import pytest
 from hgraph import graph, TSB, TS, contains_, register_service, default_path, service_impl
 from hgraph.test import eval_node
 
-from hg_systematic.impl import trade_date_week_days, business_day_impl, calendar_for_static
+from hg_systematic.impl import trade_date_week_days, business_day_impl, calendar_for_static, day_index_for_impl
 from hg_systematic.operators import business_days, Periods, HolidayCalendarSchema, business_day
+from hg_systematic.operators._calendar import next_month, day_index_for
 
 
 def test_business_days_with_dt():
@@ -55,3 +56,28 @@ def test_business_day():
                date(2025, 1, 3),
                date(2025, 1, 6)
            ]
+
+
+def test_next_month():
+
+    assert eval_node(
+        next_month,
+        [date(2025, 1, 5), date(2024, 12, 20)]
+    ) == [date(2025, 2, 1), date(2025, 1, 1)]
+
+
+def test_day_index_for():
+    @graph
+    def g() -> TS[int]:
+        register_service(default_path, trade_date_week_days)
+        register_service(default_path, business_day_impl)
+        register_service(default_path, calendar_for_static, holidays=fd({"S1": frozenset({date(2025, 1, 1)})}), )
+        register_service(default_path, day_index_for_impl)
+        return day_index_for("S1")
+
+    assert eval_node(
+        g,
+        __start_time__=datetime(2025, 1, 1),
+        __end_time__=datetime(2025, 1, 6, 23, 59),
+        __elide__=True
+    ) == [1, 2, 3]

@@ -5,13 +5,13 @@ from typing import Iterable
 from frozendict import frozendict as fd
 from hgraph import TS, compute_node, \
     graph, service_impl, default_path, contains_, if_true, sample, TSS, TSD, map_, not_, \
-    EvaluationEngineApi, generator, const
+    EvaluationEngineApi, generator, const, index_of
 
 from hg_systematic.operators._calendar import Periods, business_days, business_day, calendar_for, \
-    trade_date, HolidayCalendar
+    trade_date, HolidayCalendar, day_index_for
 
 __all__ = ["business_day_impl", "trade_date_week_days", "calendar_for_static", "create_market_holidays",
-           "holiday_const"]
+           "holiday_const", "day_index_for_impl"]
 
 
 @compute_node(overloads=business_days)
@@ -105,3 +105,22 @@ def create_market_holidays(countries: Iterable[str], start_date_time: datetime, 
 def holiday_const(holidays: frozenset[date], sow: int = 0, eow: int = 4) -> HolidayCalendar:
     """Light-weight helper for testing with holidays"""
     return const(fd(holidays=holidays, start_of_week=sow, end_of_week=eow), tp=HolidayCalendar)
+
+
+@service_impl(interfaces=day_index_for)
+def day_index_for_impl(symbol: TSS[str]) -> TSD[str, TS[int]]:
+    """
+    Provides the default implementation of the day_of_month_for service.
+    """
+    return map_(
+        _day_of_month_for_impl, __keys__=symbol, __key_arg__="symbol"
+    )
+
+
+@graph
+def _day_of_month_for_impl(symbol: TS[str]) -> TS[int]:
+    calendar = calendar_for(symbol)
+    dt = business_day(symbol)
+    days_of_month = business_days(Periods.Month, calendar, dt)
+    day_index = index_of(days_of_month, dt) + 1
+    return day_index

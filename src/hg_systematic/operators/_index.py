@@ -1,18 +1,16 @@
 from datetime import date
 from typing import Callable, Generic
 
-from hg_oap.instruments.future import month_code
 from hgraph import TSD, TS, Size, operator, SIZE, graph, map_, \
     if_then_else, pass_through, TimeSeriesSchema, TSB, SCALAR, reduce, div_, \
-    DivideByZero, passive, union, flip, feedback, ts_schema, sample, lag, default, and_, dedup, component, explode, \
-    format_, lift, CompoundScalar, compute_node, STATE
+    DivideByZero, passive, union, flip, feedback, ts_schema, sample, component, CompoundScalar, compute_node, STATE
 
 from hg_systematic.operators._calendar import business_day, calendar_for, HolidayCalendar, filter_by_calendar
 from hg_systematic.operators._price import price_in_dollars
 
 __all__ = [
     "INDEX_ROLL_FLOAT", "INDEX_ROLL_STR", "index_composition", "index_rolling_contracts",
-    "index_rolling_weight", "symbol_is", "index_level", "roll_contracts_monthly"
+    "index_rolling_weight", "symbol_is", "index_level"
 ]
 
 """
@@ -236,58 +234,6 @@ def index_level(symbol: str, initial_level: float = 100.0, record: str = None,
     wav_second_fb(level_output.wav_second)
 
     return level
-
-
-@graph
-def roll_contracts_monthly(
-        dt: TS[date],
-        roll_schedule: TSD[str, TSD[int, TS[tuple[int, int]]]],
-        format_str: TSD[str, TS[str]],
-        year_scale: TSD[str, TS[int]]
-) -> INDEX_ROLL_STR:
-    """
-    From the given date, will look up this month and next months' contracts.
-    The assumption is that by supplying a month letter and a year value (int)
-    (as scaled by the year_scale value) to the format_str, it is possible to compute the contract
-    name.
-    """
-    y1, m1, _ = explode(dt)
-    m2 = (m1 % 12) + 1
-    ro = m2 < m1
-    y2 = if_then_else(ro, y1 + 1, y1)
-
-    c1_m = map_(
-        _create_contract,
-        month=m1,
-        year=y1,
-        schedule=roll_schedule,
-        format_str=format_str,
-        year_scale=year_scale
-    )
-
-    c2_m = map_(
-        _create_contract,
-        month=m2,
-        year=y2,
-        schedule=roll_schedule,
-        format_str=format_str,
-        year_scale=year_scale
-    )
-
-    return INDEX_ROLL_STR.from_ts(first=c1_m, second=c2_m)
-
-
-@graph
-def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[int, int]]], format_str: TS[str],
-                     year_scale: TS[int]) -> TS[str]:
-    s = schedule[month]
-    m = s[0]
-    y = (year + s[1]) % year_scale
-    return format_(
-        format_str,
-        month=lift(month_code, inputs={"d": TS[int]})(m),
-        year=y
-    )
 
 
 class _NewPeriodState(CompoundScalar):

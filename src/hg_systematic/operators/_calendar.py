@@ -5,7 +5,7 @@ from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path
     compute_node, contains_, graph, TIME_SERIES_TYPE, last_modified_date, sample, if_true, not_
 
 __all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar",
-           "filter_by_calendar"]
+           "filter_by_calendar", "day_index_for"]
 
 
 class HolidayCalendarSchema(TimeSeriesSchema):
@@ -93,3 +93,29 @@ def filter_by_calendar(ts: TIME_SERIES_TYPE, holidays: HolidayCalendar) -> TIME_
     """Restrict values to be published only during working days"""
     dt = last_modified_date(ts)
     return sample(if_true(not_(contains_(holidays, dt))), ts)
+
+
+@compute_node
+def next_month(dt: TS[date], _output: TS[date] = None) -> TS[date]:
+    """
+    Returns the first date of the next month
+    """
+    dt = dt.value
+    y = dt.year
+    m = dt.month
+    if m == 12:
+        out = date(y + 1, 1, 1)
+    else:
+        out = date(y, m + 1, 1)
+    if not _output.valid or out != _output.value:
+        return out
+
+
+@subscription_service
+def day_index_for(symbol: TS[str], path: str = default_path) -> TS[int]:
+    """
+    Determines the day of the month for a given symbol,
+    the symbol is the calendar_for symbol used to extract the holiday calendar.
+
+    This depends on calendar_for service.
+    """

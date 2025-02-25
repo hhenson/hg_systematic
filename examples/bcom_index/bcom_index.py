@@ -17,7 +17,8 @@ from hg_systematic.impl import calendar_for_static, StaticPriceSchema
 from hg_systematic.impl._calendar_impl import create_market_holidays
 from hg_systematic.operators import index_composition, index_rolling_contracts, \
     index_rolling_weight, business_days, Periods, \
-    HolidayCalendar, symbol_is, INDEX_ROLL_FLOAT, roll_contracts_monthly, calendar_for, INDEX_ROLL_STR
+    HolidayCalendar, symbol_is, INDEX_ROLL_FLOAT, calendar_for, INDEX_ROLL_STR
+from hg_systematic.operators._rolling_rules import roll_contracts_monthly
 
 
 @graph(overloads=index_rolling_weight, requires=symbol_is("BCOM Index"))

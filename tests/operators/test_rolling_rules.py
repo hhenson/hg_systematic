@@ -1,28 +1,33 @@
-from datetime import datetime
+from datetime import datetime, date
 
-from hgraph import TS, cmp_, TSB, CmpResult, graph, register_service, default_path
+from hgraph import TS, cmp_, TSB, CmpResult, graph, register_service, default_path, TSL, Size, const, TSD
 from hgraph.test import eval_node
 
+from examples.bcom_index.bcom_index import get_bcom_roll_schedule, create_bcom_holidays
 from hg_systematic.impl import calendar_for_static, business_day_impl, trade_date_week_days, \
-    monthly_rolling_weights_impl
-from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest
+    monthly_rolling_weights_impl, holiday_const
+from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest, \
+    roll_contracts_monthly
 
 from frozendict import frozendict as fd
 
 
-def test_cmp_monthly_rolling_range():
-    @graph
-    def g(date_index: TS[int], start: TS[int], end: TS[int], first_day: TS[int]) -> TS[CmpResult]:
-        return cmp_(date_index, TSB[MonthlyRollingRange].from_ts(
-            start=start, end=end, first_day=first_day,
-        ))
+@graph
+def cmp_mrr(date_index: TS[int], start: TS[int], end: TS[int], first_day: TS[int]) -> TS[CmpResult]:
+    return cmp_(date_index, TSB[MonthlyRollingRange].from_ts(
+        start=start, end=end, first_day=first_day,
+    ))
 
-    assert eval_node(g, [1, 4, 9, 10], [4], [9], [4]) == [
+
+def test_cmp_monthly_rolling_range_positive():
+    assert eval_node(cmp_mrr, [1, 6, 10, 11], [5], [10], [4]) == [
         CmpResult.LT, CmpResult.EQ, CmpResult.GT, CmpResult.LT
     ]
 
-    assert eval_node(g, [17, 18, 22, 2, 3, 4], [-4], [3], [18]) == [
-        CmpResult.LT, CmpResult.EQ, None, None, CmpResult.GT, CmpResult.LT
+
+def test_cmp_monthly_rolling_range_negative():
+    assert eval_node(cmp_mrr, [17, 22, 2, 3, 4], [-5], [3], [18]) == [
+        CmpResult.LT, CmpResult.EQ, None, CmpResult.GT, CmpResult.LT
     ]
 
 
@@ -56,4 +61,70 @@ def test_monthly_roll_range_negative():
         __elide__=True
     ) == [
                1.0, 0.8, 0.6, 0.4, 0.2, 0.0, 1.0
+           ]
+
+
+@graph
+def roll_contracts_(
+        dt: TS[date],
+        roll_index: TS[int] = None,
+        roll_range: TSB[MonthlyRollingRange] = None
+) -> TSL[TS[str], Size[2]]:
+    rs = get_bcom_roll_schedule()
+    roll_schedule = const(rs, TSD[str, TSD[int, TS[tuple[int, int]]]])
+    fmt_str = const(fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}), TSD[str, TS[str]])
+    year_scale = const(fd({k: 100 for k in rs.keys()}), TSD[str, TS[int]])
+    if roll_range:
+        contracts = roll_contracts_monthly(
+            dt,
+            roll_schedule,
+            fmt_str,
+            year_scale,
+            roll_index,
+            roll_range,
+        )
+    else:
+        contracts = roll_contracts_monthly(
+            dt,
+            roll_schedule,
+            fmt_str,
+            year_scale,
+        )
+    first = contracts.first
+    second = contracts.second
+    return TSL.from_ts(first["GC"], second["GC"])
+
+
+def test_roll_contracts_monthly_no_range():
+    assert eval_node(
+        roll_contracts_,
+        [
+            date(2025, 1, 8),
+            date(2025, 12, 9),
+        ],
+    ) == [
+               {0: "GCG25 Comdty", 1: "GCJ25 Comdty"},
+               {0: "GCG26 Comdty", 1: "GCG26 Comdty"},
+           ]
+
+
+def test_roll_contracts_monthly_with_range():
+    assert eval_node(
+        roll_contracts_,
+        [
+            date(2024, 12, 9),
+            date(2024, 12, 30),
+            date(2025, 1, 2),
+            date(2025, 1, 20),
+        ],
+        [
+            6, 20, 2, 14
+        ],
+        [
+            fd(start=-3, end=5, first_day=18)
+        ]
+    ) == [
+               {0: "GCG25 Comdty", 1: "GCJ25 Comdty"},
+               None, None,
+               {0: "GCJ25 Comdty", 1: "GCJ25 Comdty"},
            ]
