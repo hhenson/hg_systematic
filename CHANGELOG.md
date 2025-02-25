@@ -65,3 +65,8 @@ Version 0.0.13 (25-02-2025)
 ---------------------------
 
 * Cleanups to index infrastructure in preparation for a new index computation approach
+
+Version 0.0.14 (25-02-2025)
+---------------------------
+
+* Add rolling_contracts_for

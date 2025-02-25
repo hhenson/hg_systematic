@@ -6,10 +6,13 @@ from hgraph.test import eval_node
 from examples.bcom_index.bcom_index import get_bcom_roll_schedule, create_bcom_holidays
 from hg_systematic.impl import calendar_for_static, business_day_impl, trade_date_week_days, \
     monthly_rolling_weights_impl, holiday_const
+from hg_systematic.impl._rolling_rules_impl import rolling_contracts_for_impl
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest, \
     roll_contracts_monthly
 
 from frozendict import frozendict as fd
+
+from hg_systematic.operators._rolling_rules import rolling_contracts_for
 
 
 @graph
@@ -128,3 +131,28 @@ def test_roll_contracts_monthly_with_range():
                None, None,
                {0: "GCJ25 Comdty", 1: "GCJ25 Comdty"},
            ]
+
+
+def test_rolling_contract_for():
+    @graph
+    def g() -> TSL[TS[str], Size[2]]:
+        register_service(default_path, calendar_for_static, holidays=fd(GC=frozenset()))
+        register_service(default_path, business_day_impl)
+        register_service(default_path, trade_date_week_days)
+        rs = get_bcom_roll_schedule()
+        register_service(
+            default_path,
+            rolling_contracts_for_impl,
+            roll_schedule=rs,
+            format_str=fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}),
+            year_scale=fd({k: 100 for k in rs.keys()}),
+            dt_symbol=fd({k: "GC" for k in rs.keys()})
+        )
+        return rolling_contracts_for("GC")
+
+    assert eval_node(
+        g,
+        __start_time__=datetime(2025, 1, 2),
+        __end_time__=datetime(2025, 1, 4),
+        __elide__=True,
+    ) == [{0: "GCG25 Comdty", 1: "GCJ25 Comdty"}]

@@ -119,3 +119,4 @@ def day_index_for(symbol: TS[str], path: str = default_path) -> TS[int]:
 
     This depends on calendar_for service.
     """
+

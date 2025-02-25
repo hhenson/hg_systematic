@@ -3,11 +3,12 @@ from datetime import date
 
 from hg_oap.instruments.future import month_code
 from hgraph import TimeSeriesSchema, TS, subscription_service, default_path, CompoundScalar, graph, TSD, explode, \
-    if_then_else, map_, lift, format_, switch_, TSB, dedup, debug_print
+    if_then_else, map_, lift, format_, switch_, TSB, dedup, debug_print, TSL, Size
 
 from hg_systematic.operators import INDEX_ROLL_STR
 
-__all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingWeightRequest", "roll_contracts_monthly"]
+__all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingWeightRequest", "roll_contracts_monthly",
+           "rolling_contracts_for"]
 
 from hg_systematic.operators._calendar import next_month
 
@@ -127,3 +128,10 @@ def _create_contract(month: TS[int], year: TS[int], schedule: TSD[int, TS[tuple[
         month=lift(month_code, inputs={"d": TS[int]})(m),
         year=y
     )
+
+
+@subscription_service
+def rolling_contracts_for(symbol: TS[str], path: str = default_path) -> TSL[TS[str], Size[2]]:
+    """
+    The rolling contracts for the symbol.
+    """
