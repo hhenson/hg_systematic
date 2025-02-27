@@ -1,18 +1,17 @@
 from datetime import datetime, date
 
-from hgraph import TS, cmp_, TSB, CmpResult, graph, register_service, default_path, TSL, Size, const, TSD
+import pytest
+from frozendict import frozendict as fd
+from hgraph import TS, cmp_, TSB, CmpResult, graph, register_service, default_path, TSL, Size, combine
 from hgraph.test import eval_node
 
 from examples.bcom_index.bcom_index import get_bcom_roll_schedule, create_bcom_holidays
 from hg_systematic.impl import calendar_for_static, business_day_impl, trade_date_week_days, \
-    monthly_rolling_weights_impl, holiday_const
-from hg_systematic.impl._rolling_rules_impl import rolling_contracts_for_impl
-from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest, \
-    roll_contracts_monthly
-
-from frozendict import frozendict as fd
-
-from hg_systematic.operators._rolling_rules import rolling_contracts_for
+    monthly_rolling_weights_impl, rolling_schedules_service_impl
+from hg_systematic.impl._rolling_rules_impl import monthly_rolling_info_service_impl
+from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest
+from hg_systematic.operators._rolling_rules import MonthlyRollingInfo, rolling_contracts, rolling_schedules, \
+    bbg_commodity_contract_fn, monthly_rolling_info, MonthlyRollingRequest
 
 
 @graph
@@ -69,90 +68,84 @@ def test_monthly_roll_range_negative():
 
 @graph
 def roll_contracts_(
-        dt: TS[date],
-        roll_index: TS[int] = None,
-        roll_range: TSB[MonthlyRollingRange] = None
+        start: TS[int],
+        end: TS[int],
 ) -> TSL[TS[str], Size[2]]:
     rs = get_bcom_roll_schedule()
-    roll_schedule = const(rs, TSD[str, TSD[int, TS[tuple[int, int]]]])
-    fmt_str = const(fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}), TSD[str, TS[str]])
-    year_scale = const(fd({k: 100 for k in rs.keys()}), TSD[str, TS[int]])
-    if roll_range:
-        contracts = roll_contracts_monthly(
-            dt,
-            roll_schedule,
-            fmt_str,
-            year_scale,
-            roll_index,
-            roll_range,
-        )
-    else:
-        contracts = roll_contracts_monthly(
-            dt,
-            roll_schedule,
-            fmt_str,
-            year_scale,
-        )
-    first = contracts.first
-    second = contracts.second
-    return TSL.from_ts(first["GC"], second["GC"])
+    register_service(default_path, rolling_schedules_service_impl, schedules=rs)
+    register_service(default_path, monthly_rolling_info_service_impl)
+    register_service(default_path, business_day_impl)
+    register_service(default_path, trade_date_week_days)
+    register_service(default_path, calendar_for_static, holidays=fd(BCOM=create_bcom_holidays()))
+
+    request = combine[TS[MonthlyRollingRequest]](start=start, end=end, calendar_name="BCOM")
+    rolling_info = monthly_rolling_info(request)
+    contracts = rolling_contracts(
+        rolling_info,
+        rolling_schedules()['GC'],
+        'GC',
+        bbg_commodity_contract_fn
+    )
+    return contracts
 
 
-def test_roll_contracts_monthly_no_range():
+@pytest.mark.parametrize(
+    ['dt', 'expected'],
+    [
+        [date(2025, 1, 8), {0: "GCG25 Comdty", 1: "GCJ25 Comdty"}],
+        [date(2025, 12, 9), {0: "GCG26 Comdty", 1: "GCG26 Comdty"}],
+    ]
+)
+def test_roll_contracts_monthly_no_range(dt, expected):
     assert eval_node(
         roll_contracts_,
-        [
-            date(2025, 1, 8),
-            date(2025, 12, 9),
-        ],
-    ) == [
-               {0: "GCG25 Comdty", 1: "GCJ25 Comdty"},
-               {0: "GCG26 Comdty", 1: "GCG26 Comdty"},
-           ]
-
-
-def test_roll_contracts_monthly_with_range():
-    assert eval_node(
-        roll_contracts_,
-        [
-            date(2024, 12, 9),
-            date(2024, 12, 30),
-            date(2025, 1, 2),
-            date(2025, 1, 20),
-        ],
-        [
-            6, 20, 2, 14
-        ],
-        [
-            fd(start=-3, end=5, first_day=18)
-        ]
-    ) == [
-               {0: "GCG25 Comdty", 1: "GCJ25 Comdty"},
-               None, None,
-               {0: "GCJ25 Comdty", 1: "GCJ25 Comdty"},
-           ]
-
-
-def test_rolling_contract_for():
-    @graph
-    def g() -> TSL[TS[str], Size[2]]:
-        register_service(default_path, calendar_for_static, holidays=fd(GC=frozenset()))
-        register_service(default_path, business_day_impl)
-        register_service(default_path, trade_date_week_days)
-        rs = get_bcom_roll_schedule()
-        register_service(
-            default_path,
-            rolling_contracts_for_impl,
-            roll_schedule=rs,
-            format_str=fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}),
-            year_scale=fd({k: 100 for k in rs.keys()}),
-            dt_symbol=fd({k: "GC" for k in rs.keys()})
-        )
-        return rolling_contracts_for("GC")
-
-    assert eval_node(
-        g,
-        __start_time__=datetime(2025, 1, 2),
-        __end_time__=datetime(2025, 1, 4),
+        [5],
+        [10],
         __elide__=True,
-    ) == [{0: "GCG25 Comdty", 1: "GCJ25 Comdty"}]
+        __start_time__=datetime(dt.year, dt.month, dt.day),
+        __end_time__=datetime(dt.year, dt.month, dt.day, 23),
+    ) == [expected]
+
+
+@pytest.mark.parametrize(
+    ['dt', 'expected'],
+    [
+        [date(2024, 12, 9), {0: "GCG25 Comdty", 1: "GCJ25 Comdty"}],
+        [date(2024, 12, 30), {0: "GCG25 Comdty", 1: "GCJ25 Comdty"}],
+        [date(2025, 1, 2), {0: "GCG25 Comdty", 1: "GCJ25 Comdty"}],
+        [date(2025, 1, 17), {0: "GCJ25 Comdty", 1: "GCJ25 Comdty"}],
+    ]
+)
+def test_roll_contracts_monthly_with_range(dt, expected):
+    assert eval_node(
+        roll_contracts_,
+        [-3],
+        [5],
+        __elide__=True,
+        __start_time__=datetime(dt.year, dt.month, dt.day),
+        __end_time__=datetime(dt.year, dt.month, dt.day, 23),
+    ) == [expected]
+
+# def test_rolling_contract_for():
+#     @graph
+#     def g() -> TSL[TS[str], Size[2]]:
+#         register_service(default_path, calendar_for_static, holidays=fd(GC=frozenset()))
+#         register_service(default_path, business_day_impl)
+#         register_service(default_path, trade_date_week_days)
+#         rs = get_bcom_roll_schedule()
+#         register_service(
+#             default_path,
+#             rolling_contracts_for_impl,
+#             roll_schedule=rs,
+#             format_str=fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}),
+#             year_scale=fd({k: 100 for k in rs.keys()}),
+#             dt_symbol=fd({k: "GC" for k in rs.keys()})
+#         )
+#         return rolling_contracts_for("GC")
+#
+#     assert eval_node(
+#         g,
+#         __start_time__=datetime(2025, 1, 2),
+#         __end_time__=datetime(2025, 1, 4),
+#         __elide__=True,
+#     ) == [{0: "GCG25 Comdty", 1: "GCJ25 Comdty"}]

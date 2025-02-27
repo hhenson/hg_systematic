@@ -1,13 +1,17 @@
-from datetime import date
-from typing import cast, Mapping, Any
+from typing import cast, Mapping
 
 from hgraph import compute_node, cmp_, TS, TSB, CmpResult, service_impl, TSS, TSD, default_path, graph, map_, index_of, \
-    switch_, len_, lift, const, cast_, if_then_else, dedup, TSL, Size, explode, TimeSeriesList, TimeSeriesValueInput
+    switch_, len_, lift, const, cast_, if_then_else, explode
 
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, business_day, \
-    MonthlyRollingWeightRequest, calendar_for, business_days, Periods, rolling_contracts_for
+    MonthlyRollingWeightRequest, calendar_for, business_days, Periods
 
-__all__ = ["monthly_rolling_weights_impl"]
+__all__ = ["monthly_rolling_weights_impl", "monthly_rolling_info_service_impl", "rolling_schedules_service_impl", ]
+
+from hg_systematic.operators._calendar import next_month
+
+from hg_systematic.operators._rolling_rules import monthly_rolling_info, MonthlyRollingRequest, MonthlyRollingInfo, \
+    rolling_schedules
 
 
 @compute_node(overloads=cmp_)
@@ -86,7 +90,7 @@ def _monthly_rolling_weight(
         start_negative,
         {
             True: lambda s, e: cast(float, abs(s) + e),
-            False: lambda s, e: cast(float, e-s)
+            False: lambda s, e: cast(float, e - s)
         },
         start,
         end
@@ -127,36 +131,95 @@ def _weight(day_index: TS[int], range_: TSB[MonthlyRollingRange], roll_fraction:
     return w
 
 
-@service_impl(interfaces=rolling_contracts_for)
-def rolling_contracts_for_impl(
-        symbol: TSS[str],
-        roll_schedule: Mapping[str, Mapping[int, tuple[int, int]]],
-        format_str: Mapping[str, str],
-        year_scale: Mapping[str, int],
-        dt_symbol: Mapping[str, str]
-) -> TSD[str, TSL[TS[str], Size[2]]]:
-
-    roll_schedule = const(roll_schedule, TSD[str, TSD[int, TS[tuple[int, int]]]])
-    format_str = const(format_str, TSD[str, TS[str]])
-    year_scale = const(year_scale, TSD[str, TS[int]])
-    dt_symbol = const(dt_symbol, TSD[str, TS[str]])
-    dts = map_(lambda dt: business_day(dt), dt_symbol)
-    return map_(_roll_contracts, dts, roll_schedule, format_str, year_scale)
+@service_impl(interfaces=monthly_rolling_info)
+def monthly_rolling_info_service_impl(
+        request: TSS[MonthlyRollingRequest],
+        business_day_path: str = "",
+        calendar_for_path: str = ""
+) -> TSD[MonthlyRollingRequest, TSB[MonthlyRollingInfo]]:
+    return map_(
+        lambda key: monthly_rolling_info_impl(key.start, key.end, key.calendar_name, business_day_path,
+                                              calendar_for_path),
+        __keys__=request,
+    )
 
 
 @graph
-def _roll_contracts(
-        dt: TS[date],
-        roll_schedule: TSD[int, TS[tuple[int, int]]],
-        format_str: TS[str],
-        year_scale: TS[int]
-) -> TSL[TS[str], Size[2]]:
-    from hg_systematic.operators._rolling_rules import _create_contract
-    y1, m1, _ = explode(dt)
+def monthly_rolling_info_impl(
+        start: TS[int],
+        end: TS[int],
+        calendar_name: TS[str],
+        business_day_path: str = "",
+        calendar_for_path: str = ""
+) -> TSB[MonthlyRollingInfo]:
+    """
+    Computes the rolling info for a given range and calendar name.
+    """
+    dt = business_day(calendar_name, path=business_day_path if business_day_path else default_path)
+    calendar = calendar_for(calendar_name, path=calendar_for_path if calendar_for_path else default_path)
+    days_of_month = business_days(Periods.Month, calendar, dt)
+    day_index = index_of(days_of_month, dt) + 1
+    start_negative = start < 0
+
+    first_day_index = switch_(
+        start_negative,
+        {
+            True: lambda s, dom: len_(dom) + s,
+            False: lambda s, dom: s
+        },
+        start,
+        days_of_month
+    )
+
+    range_ = TSB[MonthlyRollingRange].from_ts(
+        first_day=first_day_index,
+        start=start,
+        end=end
+    )
+
+    is_rolling = cmp_(day_index, range_)
+
+    roll_dt = switch_(
+        start < 0,
+        {
+            True: lambda d, di, end: switch_(
+                di > end,
+                {
+                    True: lambda d_: next_month(d_),
+                    False: lambda d_: d_
+                },
+                d
+            ),
+            False: lambda d, di, end: d
+        },
+        dt,
+        day_index,
+        end,
+    )
+
+    y1, m1, _ = explode(roll_dt)
     m2 = (m1 % 12) + 1
     ro = m2 < m1
     y2 = if_then_else(ro, y1 + 1, y1)
-    return TSL[TS[str], Size[2]].from_ts(
-        _create_contract(m1, y1, roll_schedule, format_str, year_scale),
-        _create_contract(m2, y2, roll_schedule, format_str, year_scale)
+
+    return TSB[MonthlyRollingInfo].from_ts(
+        first_day=first_day_index,
+        start=start,
+        end=end,
+        days_of_month=days_of_month,
+        day_index=day_index,
+        dt=dt,
+        roll_state=is_rolling,
+        roll_out_month=m1,
+        roll_out_year=y1,
+        roll_in_month=m2,
+        roll_in_year=y2
     )
+
+
+@service_impl(interfaces=rolling_schedules)
+def rolling_schedules_service_impl(
+        schedules: Mapping[str, Mapping[int, tuple[int, int]]]
+) -> TSD[str, TSD[int, TS[tuple[int, int]]]]:
+    """Simple const implementation of rolling_schedules."""
+    return const(schedules, TSD[str, TSD[int, TS[tuple[int, int]]]])
