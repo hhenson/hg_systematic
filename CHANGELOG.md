@@ -70,3 +70,8 @@ Version 0.0.14 (25-02-2025)
 ---------------------------
 
 * Add rolling_contracts_for
+
+Version 0.0.15 (27-02-2025)
+---------------------------
+
+* Clean-up rolling info

@@ -10,7 +10,7 @@ from hg_systematic.impl import calendar_for_static, business_day_impl, trade_dat
     monthly_rolling_weights_impl, rolling_schedules_service_impl
 from hg_systematic.impl._rolling_rules_impl import monthly_rolling_info_service_impl
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest
-from hg_systematic.operators._rolling_rules import MonthlyRollingInfo, rolling_contracts, rolling_schedules, \
+from hg_systematic.operators._rolling_rules import rolling_contracts, rolling_schedules, \
     bbg_commodity_contract_fn, monthly_rolling_info, MonthlyRollingRequest
 
 
@@ -39,6 +39,7 @@ def monthly_roll(request: TS[MonthlyRollingWeightRequest]) -> TS[float]:
     register_service(default_path, business_day_impl)
     register_service(default_path, trade_date_week_days)
     register_service(default_path, monthly_rolling_weights_impl)
+    register_service(default_path, monthly_rolling_info_service_impl)
     return monthly_rolling_weights(request)
 
 

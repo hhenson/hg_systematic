@@ -5,13 +5,11 @@ from hgraph import compute_node, cmp_, TS, TSB, CmpResult, service_impl, TSS, TS
 
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, business_day, \
     MonthlyRollingWeightRequest, calendar_for, business_days, Periods
-
-__all__ = ["monthly_rolling_weights_impl", "monthly_rolling_info_service_impl", "rolling_schedules_service_impl", ]
-
 from hg_systematic.operators._calendar import next_month
-
 from hg_systematic.operators._rolling_rules import monthly_rolling_info, MonthlyRollingRequest, MonthlyRollingInfo, \
     rolling_schedules
+
+__all__ = ["monthly_rolling_weights_impl", "monthly_rolling_info_service_impl", "rolling_schedules_service_impl", ]
 
 
 @compute_node(overloads=cmp_)
@@ -66,41 +64,24 @@ def _monthly_rolling_weight(
         business_day_path: str,
         calendar_for_path: str,
 ) -> TS[float]:
-    symbol = request.calendar_name
-    dt = business_day(symbol, path=business_day_path if business_day_path else default_path)
-    calendar = calendar_for(symbol, path=calendar_for_path if calendar_for_path else default_path)
-    days_of_month = business_days(Periods.Month, calendar, dt)
-    day_index = index_of(days_of_month, dt) + 1
+    rolling_info = monthly_rolling_info(request)
 
-    start = request.start
-    end = request.end
-    start_negative = start < 0
-
-    first_day_index = switch_(
-        start_negative,
-        {
-            True: lambda s, dom: len_(dom) + s,
-            False: lambda s, dom: s
-        },
-        start,
-        days_of_month
-    )
-    round_ = lift(round, inputs={"number": TS[float], "ndigits": TS[int]}, output=TS[float])
+    start_negative = rolling_info.start < 0
     roll_fraction = 1.0 / switch_(
         start_negative,
         {
             True: lambda s, e: cast(float, abs(s) + e),
             False: lambda s, e: cast(float, e - s)
         },
-        start,
-        end
+        rolling_info.start,
+        rolling_info.end
     )
     range_ = TSB[MonthlyRollingRange].from_ts(
-        first_day=first_day_index,
-        start=start,
-        end=end
+        first_day=rolling_info.first_day,
+        start=rolling_info.start,
+        end=rolling_info.end
     )
-    is_rolling = cmp_(day_index, range_)
+    is_rolling = rolling_info.roll_state
     weight = switch_(
         is_rolling,
         {
@@ -108,10 +89,12 @@ def _monthly_rolling_weight(
             CmpResult.EQ: lambda d, r, f: _weight(d, r, f),
             CmpResult.GT: lambda d, r, f: const(0.0),
         },
-        day_index,
+        rolling_info.day_index,
         range_,
         roll_fraction,
     )
+
+    round_ = lift(round, inputs={"number": TS[float], "ndigits": TS[int]}, output=TS[float])
     return round_(number=weight, ndigits=request.round_to)
 
 
