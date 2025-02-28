@@ -6,7 +6,9 @@ from hg_oap.instruments.future import month_code
 from hgraph import TimeSeriesSchema, TS, subscription_service, default_path, CompoundScalar, graph, TSD, TSB, TSL, Size, \
     CmpResult, reference_service, format_, lift
 
-__all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingWeightRequest",  ]
+__all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingRequest", "MonthlyRollingWeightRequest",
+           "monthly_rolling_info", "MonthlyRollingInfo", "rolling_contracts", "bbg_commodity_contract_fn",
+           "rolling_schedules"]
 
 
 @dataclass(frozen=True)
