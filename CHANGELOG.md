@@ -75,3 +75,9 @@ Version 0.0.15 (27-02-2025)
 ---------------------------
 
 * Clean-up rolling info
+
+
+Version 0.0.16 (03-03-2025)
+---------------------------
+
+* Expose y, m, d of dt in MonthlyRollingInfo
