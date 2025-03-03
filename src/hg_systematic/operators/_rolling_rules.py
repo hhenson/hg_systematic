@@ -60,6 +60,11 @@ class MonthlyRollingInfo(MonthlyRollingRange):
     days_of_month: TS[tuple[date]]  # The dates within the month
     day_index: TS[int]  # The index within the days_of_month
     dt: TS[date]  # The date that the information represents
+    # --- exploded values of date
+    day: TS[int]
+    month: TS[int]
+    year: TS[int]
+    # ---
     roll_state: TS[CmpResult]  # LT before roll, EQ in roll, GT After roll
     roll_out_month: TS[int]
     roll_out_year: TS[int]

@@ -185,6 +185,8 @@ def monthly_rolling_info_impl(
     ro = m2 < m1
     y2 = if_then_else(ro, y1 + 1, y1)
 
+    y, m, d = explode(dt)
+
     return TSB[MonthlyRollingInfo].from_ts(
         first_day=first_day_index,
         start=start,
@@ -192,6 +194,9 @@ def monthly_rolling_info_impl(
         days_of_month=days_of_month,
         day_index=day_index,
         dt=dt,
+        day=d,
+        month=m,
+        year=y,
         roll_state=is_rolling,
         roll_out_month=m1,
         roll_out_year=y1,
