@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from hgraph import TSD, TS, TimeSeriesSchema, graph, subscription_service, TSS, service_impl, mesh_
 
-__all__ = ["NotionalUnits",]
+__all__ = ["NotionalUnits", "NotionalUnitValues", "IndexPosition", "IndexStructure",]
 
 # A dictionary of fractional units representing the current or desired holding of the unit
 NotionalUnits = TSD[str, TS[float]]
@@ -17,12 +17,14 @@ NotionalUnitValues = TSD[str, TS[float]]
 
 
 @dataclass
-class Position(TimeSeriesSchema):
+class IndexPosition(TimeSeriesSchema):
     """
-    The units and value of the units.
+    The units and value of the units as well as the level of the index
+    when the units were set.
     """
     units: NotionalUnits
-    value: NotionalUnitValues
+    unit_values: NotionalUnitValues
+    level: TS[float]
 
 
 @dataclass
@@ -39,8 +41,8 @@ class IndexStructure(TimeSeriesSchema):
 
     The value does not change when no re-balancing is occurring.
     """
-    current_position: Position
-    target_position: Position
-    previous_position: Position
+    current_position: IndexPosition
+    target_units: NotionalUnits
+    previous_units: NotionalUnits
 
 

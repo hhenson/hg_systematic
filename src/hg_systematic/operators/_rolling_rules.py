@@ -4,7 +4,7 @@ from typing import Callable
 
 from hg_oap.instruments.future import month_code
 from hgraph import TimeSeriesSchema, TS, subscription_service, default_path, CompoundScalar, graph, TSD, TSB, TSL, Size, \
-    CmpResult, reference_service, format_, lift
+    CmpResult, reference_service, format_, lift, compute_node, apply
 
 __all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingRequest", "MonthlyRollingWeightRequest",
            "monthly_rolling_info", "MonthlyRollingInfo", "rolling_contracts", "bbg_commodity_contract_fn",
@@ -65,6 +65,8 @@ class MonthlyRollingInfo(MonthlyRollingRange):
     month: TS[int]
     year: TS[int]
     # ---
+    begin_roll: TS[bool]
+    end_roll: TS[bool]
     roll_state: TS[CmpResult]  # LT before roll, EQ in roll, GT After roll
     roll_out_month: TS[int]
     roll_out_year: TS[int]
@@ -84,7 +86,7 @@ def rolling_contracts(
         roll_info: TSB[MonthlyRollingInfo],
         roll_schedule: TSD[int, TS[tuple[int, int]]],
         asset: TS[str],
-        contract_fn: Callable[[TS[str], TS[int], TS[int]], TS[str]],
+        contract_fn: TS[Callable[[TS[str], TS[int], TS[int]], TS[str]]],
 ) -> TSL[TS[str], Size[2]]:
     """
     The contracts for the given roll_info and contract_fn.
@@ -134,11 +136,11 @@ def _create_contract(
         year: TS[int],
         schedule: TSD[int, TS[tuple[int, int]]],
         asset: TS[str],
-        contract_fn: Callable[[TS[str], TS[int], TS[int]], TS[str]]) -> TS[str]:
+        contract_fn: TS[Callable[[TS[str], TS[int], TS[int]], TS[str]]]) -> TS[str]:
     s = schedule[month]
     m = s[0]
     y = year + s[1]
-    return contract_fn(asset, m, y)
+    return apply[TS[str]](contract_fn, asset, m, y)
 
 
 @reference_service
@@ -148,12 +150,5 @@ def rolling_schedules(path: str = default_path) -> TSD[str, TSD[int, TS[tuple[in
     """
 
 
-@graph
-def bbg_commodity_contract_fn(asset: TS[str], month: TS[int], year: TS[int]) -> TS[str]:
-    y = year % 100
-    return format_(
-        "{asset}{month}{year:02d} Comdty",
-        asset=asset,
-        month=lift(month_code, inputs={"d": TS[int]})(month),
-        year=y
-    )
+def bbg_commodity_contract_fn(asset: str, month: int, year: int) -> str:
+    return f"{asset}{month_code(month)}{year % 100:02d} Comdty"

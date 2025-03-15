@@ -39,11 +39,13 @@ can be assembled using this simple (or other complex) underlyers.
 
 So we could indicate a structure as follows:
 
+```
 Index
   |
   +- SingleAssetIndex
   |
   +- MultiIndex
+```
 
 Where the MultiIndex consists of one or more Index (either SingleAssetIndex or MultiIndex).
 

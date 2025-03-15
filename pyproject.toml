@@ -28,7 +28,7 @@ packages = [
 
 [tool.poetry.dependencies]
     python = ">=3.11"
-    hgraph = ">=0.4.0"
+    hgraph = ">=0.4.4"
     hg_oap = ">=0.1.13"
     frozendict = ">=2.3.10"
     sortedcontainers = ">=2.4.0"
@@ -46,6 +46,7 @@ packages = [
 #web = [
 #]
 importlib-resources = "^6.5.2"
+yfinance = "==0.2.54"
 
 [tool.poetry.group.docs]
 optional = true
