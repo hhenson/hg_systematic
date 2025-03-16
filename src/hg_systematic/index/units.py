@@ -3,7 +3,7 @@ Representing the units held (or desired to be held) by an index.
 """
 from dataclasses import dataclass
 
-from hgraph import TSD, TS, TimeSeriesSchema, graph, subscription_service, TSS, service_impl, mesh_
+from hgraph import TSD, TS, TimeSeriesSchema, graph, subscription_service, TSS, service_impl, mesh_, TSB
 
 __all__ = ["NotionalUnits", "NotionalUnitValues", "IndexPosition", "IndexStructure",]
 
@@ -41,7 +41,7 @@ class IndexStructure(TimeSeriesSchema):
 
     The value does not change when no re-balancing is occurring.
     """
-    current_position: IndexPosition
+    current_position: TSB[IndexPosition]
     target_units: NotionalUnits
     previous_units: NotionalUnits
 

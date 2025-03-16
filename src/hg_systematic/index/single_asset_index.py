@@ -1,13 +1,12 @@
 from dataclasses import dataclass
-from operator import not_, or_
 from typing import Callable
 
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, TimeSeriesSchema, Size, TSL, convert, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default
+    default, debug_print, compute_node, TSD, collect, or_, not_
 
-from hg_systematic.index.configuration import SingleAssetIndexConfiguration
+from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
 from hg_systematic.index.pricing_service import price_index_op, IndexResult
 from hg_systematic.index.units import IndexStructure, IndexPosition, NotionalUnitValues, NotionalUnits
@@ -65,11 +64,15 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         calendar_name=config.publish_holiday_calendar,
         round_to=config.roll_rounding
     )
+    debug_print("monthly_rolling_request", monthly_rolling_request)
 
     halt_calendar = calendar_for(config.trading_halt_calendar)
 
     roll_info = monthly_rolling_info(monthly_rolling_request)
+    debug_print("roll_info", roll_info)
     rolling_weights = monthly_rolling_weights(monthly_rolling_request)
+    debug_print("rolling_weights", rolling_weights)
+
     roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
     asset = config.asset
     contracts = rolling_contracts(
@@ -78,19 +81,25 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         asset,
         config.contract_fn
     )
+    debug_print("contracts", contracts)
+
     dt = roll_info.dt
     halt_trading = contains_(halt_calendar, dt)
+    debug_print("halt_trading", halt_trading)
 
-    required_prices_fb = feedback(TSS[str], const({}, TSS[str]))
+    required_prices_fb = feedback(TSS[str], frozenset())
     # Join current positions + roll_in / roll_out contract, perhaps this could be reduced to just roll_in?
-    all_contracts = union(convert[TSS](contracts), required_prices_fb())
+    all_contracts = union(combine[TSS[str]](*contracts), required_prices_fb())
+    debug_print("all_contracts", all_contracts)
 
-    prices = map_(price_in_dollars, __keys__=all_contracts, __key_arg__="symbol")
+    prices = map_(lambda key: price_in_dollars(key), __keys__=all_contracts)
+    debug_print("prices", prices)
 
-    initial_structure_default = ...
+    initial_structure_default = initial_structure_from_config(config)
 
     index_structure_fb = feedback(TSB[IndexStructure])
     index_structure = default(index_structure_fb(), initial_structure_default)
+    debug_print("index_structure", index_structure)
 
     out = monthly_single_asset_index_component(
         index_structure,
@@ -105,7 +114,8 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     required_prices_fb(out.index_structure.current_position.units.key_set)
     index_structure_fb(out.index_structure)
 
-    return out.level
+    debug_print("level", out.level)
+    return out
 
 
 @graph
@@ -121,7 +131,7 @@ def compute_level(
         map_(
             lambda pos_curr, prc_prev, prc_now: (prc_prev - prc_now) * pos_curr,
             current_position.units,
-            current_position.value,
+            current_position.unit_values,
             no_key(current_price),
         ),
         0.0
@@ -134,12 +144,12 @@ def target_units_from_current(
         current_units: TS[float],
         target_contract: TS[str],
         prices: NotionalUnitValues,
-) -> TS[float]:
+) -> TSD[str, TS[float]]:
     """
     Compute the target units from the current contract unit using price weighting.
     """
     current_value = current_units * passive(prices[current_contract])
-    return current_value / passive(prices[target_contract])
+    return collect[TSD](target_contract, current_value / passive(prices[target_contract]))
 
 
 @graph
@@ -164,9 +174,9 @@ def roll_contracts(
         roll_halted,
         {
             True: lambda c, p, p_c, t, t_c, w: c,
-            False: lambda c, p, p_c, t, t_c, w: combine[NotionalUnits](
-                keys=TSL[TS[str], Size[2]](p_c, t_c),
-                values=TSL[TS[float], Size[2]](
+            False: lambda c, p, p_c, t, t_c, w: combine[TSD](
+                keys=combine[TSL](p_c, t_c),
+                tsl=combine[TSL](
                     p[p_c] * w,  # The remaining previous units
                     t[t_c] * (1.0 - w)  # The target units to move into
                 )
@@ -274,20 +284,19 @@ def re_balance_contracts(
             not halt_trading
         ),
         {
-            True: lambda c, t, t_c: convert[NotionalUnits](t_c, t),
-            False: lambda c, t, t_c: c
+            True: lambda c, t: t,
+            False: lambda c, t: c
         },
         current_units,
-        target_units,
-        contracts[1]
+        target_units
     )
 
     # Detect "trade" and update the current positions to reflect said trade
-    traded = current_units != index_structure.current_position.units
+    traded = not_(current_units == index_structure.current_position.units)
     current_position = switch_(
         traded,
         {
-            True: lambda c, c_u, p: combine[IndexPosition](
+            True: lambda c, c_u, p: combine[TSB[IndexPosition]](
                 units=c_u,
                 level=reduce(lambda x, y: x + y, map_(lambda a, b: a * b, c_u, no_key(p)), 0.0),
                 unit_values=map_(lambda u, p: p, c_u, no_key(p))

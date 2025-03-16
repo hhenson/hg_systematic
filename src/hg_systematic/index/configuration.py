@@ -3,10 +3,11 @@ from datetime import date
 from typing import Mapping
 
 from frozendict import frozendict as fd
-from hgraph import CompoundScalar
+from hgraph import CompoundScalar, compute_node, TS, TSB
 
+__all__ = ["IndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration", "initial_structure_from_config"]
 
-__all__ = ["IndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration",]
+from hg_systematic.index.units import IndexStructure, NotionalUnits
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,11 @@ class IndexConfiguration(CompoundScalar):
     rounding: int = 8
     initial_level: float = 100.0
     start_date: date = None
+    current_position: Mapping[str, float] = None
+    current_position_value: Mapping[str, float] = None
+    current_level: float = 100.0
+    target_position: Mapping[str, float] = None
+    previous_position: Mapping[str, float] = None
 
 
 @dataclass(frozen=True)
@@ -46,20 +52,27 @@ class SingleAssetIndexConfiguration(IndexConfiguration):
         conditions for the positions tracking is also required.
     """
     asset: str = None
-    current_position: float = 0.0
-    current_position_value: float = 0.0
-    target_position: float = 0.0
-    target_position_value: float = 0.0
-    previous_position: float = 0.0
-    previous_position_value: float = 0.0
 
 
 @dataclass(frozen=True)
 class MultiIndexConfiguration(IndexConfiguration):
     indices: tuple[str, ...] = None
-    current_positions: Mapping[str, float] = fd()
-    current_position_values: Mapping[str, float] = fd()
-    target_positions: Mapping[str, float] = fd()
-    target_position_values: Mapping[str, float] = fd()
-    previous_positions: Mapping[str, float] = fd()
-    previous_position_values: Mapping[str, float] = fd()
+
+
+@compute_node
+def initial_structure_from_config(config: TS[IndexConfiguration]) -> TSB[IndexStructure]:
+    """
+    Prepare the initial structure from the index configuration.
+    This will tick once only with the values extracted from the index configuration.
+    """
+    config.make_passive()
+    config: IndexConfiguration = config.value
+    return {
+        "current_position": {
+            "units": {} if config.current_position is None else config.current_position,
+            "unit_values": {} if config.current_position is None else config.current_position_value,
+            "level": config.current_level
+        },
+        "previous_units": {} if config.previous_position is None else config.previous_position,
+        "target_units": {} if config.target_position is None else config.target_position,
+    }
