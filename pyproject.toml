@@ -45,8 +45,7 @@ packages = [
 #[tool.poetry.extras]
 #web = [
 #]
-importlib-resources = "^6.5.2"
-yfinance = "==0.2.54"
+#yfinance = "==0.2.54"
 
 [tool.poetry.group.docs]
 optional = true
