@@ -63,7 +63,13 @@ def test_single_asset_index():
                 contract_fn=bbg_commodity_contract_fn
             ))
 
-    result = eval_node(g, __start_time__=datetime(2019, 4, 1), __end_time__=datetime(2019, 5, 1), __elide__=True)
+    result = eval_node(
+        g,
+        __start_time__=datetime(2019, 4, 1),
+        __end_time__=datetime(2019, 5, 1),
+        __elide__=True,
+        #__trace__=True
+    )
     print('Result', result)
     assert result
 

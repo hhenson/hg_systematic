@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from typing import Callable
 
 from frozendict import frozendict
-from hgraph import graph, TS, combine, map_, TSB, TimeSeriesSchema, Size, TSL, convert, TSS, feedback, \
+from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default, debug_print, compute_node, TSD, collect, or_, not_
+    default, debug_print, TSD, collect, not_, and_, dedup, lag
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -84,7 +84,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     debug_print("contracts", contracts)
 
     dt = roll_info.dt
-    halt_trading = contains_(halt_calendar, dt)
+    halt_trading = dedup(contains_(halt_calendar, dt))
     debug_print("halt_trading", halt_trading)
 
     required_prices_fb = feedback(TSS[str], frozenset())
@@ -98,7 +98,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     initial_structure_default = initial_structure_from_config(config)
 
     index_structure_fb = feedback(TSB[IndexStructure])
-    index_structure = default(index_structure_fb(), initial_structure_default)
+    index_structure = default(lag(index_structure_fb(), 1, roll_info.dt), initial_structure_default)
     debug_print("index_structure", index_structure)
 
     out = monthly_single_asset_index_component(
@@ -216,10 +216,12 @@ def monthly_single_asset_index_component(
     :return: The level and other interim information.
     """
 
-    needs_re_balance = or_(
+    needs_re_balance = dedup(all_(
         contracts[0] != contracts[1],
+        len_(index_structure.target_units) > 0,
         not_(roll_completed(index_structure.current_position.units, index_structure.target_units))
-    )
+    ))
+    debug_print("needs_re_balance", needs_re_balance)
     new_index_structure = switch_(
         needs_re_balance,
         {
