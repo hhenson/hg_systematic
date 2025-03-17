@@ -68,7 +68,7 @@ def test_single_asset_index():
         __start_time__=datetime(2019, 4, 1),
         __end_time__=datetime(2019, 5, 1),
         __elide__=True,
-        __trace__=True
+        #__trace__=True
     )
     print('Result', result)
     assert result
