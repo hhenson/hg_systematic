@@ -4,7 +4,7 @@ from typing import Callable
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default, debug_print, TSD, collect, not_, and_, dedup, lag
+    default, debug_print, TSD, collect, not_, and_, dedup, lag, or_, if_true, modified
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -98,7 +98,8 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     initial_structure_default = initial_structure_from_config(config)
 
     index_structure_fb = feedback(TSB[IndexStructure])
-    index_structure = default(lag(index_structure_fb(), 1, roll_info.dt), initial_structure_default)
+    debug_print("index_structure_fb", index_structure_fb())
+    index_structure = dedup(default(lag(index_structure_fb(), 1, roll_info.dt), initial_structure_default))
     debug_print("index_structure", index_structure)
 
     out = monthly_single_asset_index_component(
@@ -109,10 +110,10 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         prices,
         halt_trading
     )
-
+    debug_print("out", out)
     # We require prices for the items in the current position at least
     required_prices_fb(out.index_structure.current_position.units.key_set)
-    index_structure_fb(out.index_structure)
+    index_structure_fb(dedup(out.index_structure))
 
     debug_print("level", out.level)
     return out
@@ -126,16 +127,25 @@ def compute_level(
     """
     Compute the level from the current positions and the last re-balance level
     """
-    return current_position.level + reduce(
-        lambda x, y: x + y,
-        map_(
+    debug_print("current_positions.level", current_position.level)
+    debug_print("compute_level:prices", current_price)
+    debug_print("compute_level:units", current_position.units)
+    debug_print("compute_level:unit_values", current_position.unit_values)
+    returns = map_(
             lambda pos_curr, prc_prev, prc_now: (prc_prev - prc_now) * pos_curr,
             current_position.units,
             current_position.unit_values,
-            no_key(current_price),
-        ),
+            current_price,
+            __keys__=current_position.units.key_set,
+        )
+    debug_print("compute_level:returns", returns)
+    new_level = current_position.level + reduce(
+        lambda x, y: x + y,
+        returns,
         0.0
     )
+    debug_print("compute_level:new_level", new_level)
+    return new_level
 
 
 @graph
@@ -216,17 +226,19 @@ def monthly_single_asset_index_component(
     :return: The level and other interim information.
     """
 
-    needs_re_balance = dedup(all_(
-        contracts[0] != contracts[1],
+    needs_re_balance = dedup(or_(
+        # This will initiate a roll, so will set the target units
+        and_(contracts[0] != contracts[1], rolling_info.as_schema.begin_roll),
+        # Once the roll is complete, the target units are set to an empty dict.
         len_(index_structure.target_units) > 0,
-        not_(roll_completed(index_structure.current_position.units, index_structure.target_units))
     ))
     debug_print("needs_re_balance", needs_re_balance)
+    debug_print("index_structure: pre", index_structure)
     new_index_structure = switch_(
         needs_re_balance,
         {
             True: lambda i_s, r_i, c, p, r_w, h_t: re_balance_contracts(i_s, r_i, c, p, r_w, h_t),
-            False: lambda i_s, r_i, c, p, r_w, h_t: i_s
+            False: lambda i_s, r_i, c, p, r_w, h_t: i_s  # Force a copy of the value when switching
         },
         index_structure,
         rolling_info,
@@ -235,13 +247,16 @@ def monthly_single_asset_index_component(
         rolling_weights,
         halt_trading,
     )
+    debug_print("new_index_structure", new_index_structure)
     # If we have already traded this produces an unnecessary computation, but check if we traded again
     # may be just as expensive and there is less switching involved then.
     level = compute_level(new_index_structure.current_position, prices)
-    return combine[TSB[IndexResult]](
+    out = combine[TSB[IndexResult]](
         level=level,
         index_structure=new_index_structure
     )
+    debug_print("out:result", out)
+    return out
 
 
 def re_balance_contracts(
@@ -253,14 +268,17 @@ def re_balance_contracts(
         halt_trading: TS[bool]
 ) -> TSB[IndexStructure]:
     # Compute the portfolio change
-    re_balance_signal = rolling_info.begin_roll
+    re_balance_signal = if_true(rolling_info.begin_roll)
+    debug_print("re_balance_signal", re_balance_signal)
     previous_units = sample(re_balance_signal, index_structure.current_position.units)
+    debug_print("previous_units", previous_units)
     target_units = sample(re_balance_signal, target_units_from_current(
         contracts[0],
         previous_units[contracts[0]],
         contracts[1],
         prices
     ))
+    debug_print("target_units", target_units)
     # Then we need to compute the time-related weighting when we are rolling
     current_units = switch_(
         rolling_info.roll_state,
@@ -277,6 +295,7 @@ def re_balance_contracts(
         rolling_weights,
         halt_trading
     )
+    debug_print("current_units:1", current_units)
     # This will roll under normal circumstances, but it is possible that we remain un-transitioned
     # due to trading halts, so we put in protection for this case
     current_units = switch_(
@@ -292,32 +311,53 @@ def re_balance_contracts(
         current_units,
         target_units
     )
+    debug_print("current_units:2", current_units)
 
     # Detect "trade" and update the current positions to reflect said trade
     traded = not_(current_units == index_structure.current_position.units)
+    debug_print("traded", traded)
     current_position = switch_(
         traded,
         {
-            True: lambda c, c_u, p: combine[TSB[IndexPosition]](
+            True: lambda c_p, c_u, p: combine[TSB[IndexPosition]](
                 units=c_u,
-                level=reduce(lambda x, y: x + y, map_(lambda a, b: a * b, c_u, no_key(p)), 0.0),
+                level=re_compute_level(c_u, p),
                 unit_values=map_(lambda u, p: p, c_u, no_key(p))
             ),
-            False: lambda c, c_u, p: c
+            False: lambda c_p, c_u, p: dedup(c_p)
         },
         index_structure.current_position,
         current_units,
-        prices
+        prices,
     )
+    debug_print("current_position:3", current_position)
 
     # Detect the end-roll and adjust as appropriate
-    end_roll = roll_completed(current_units, target_units)
-    empty_units = const(frozendict(), NotionalUnits)
-    previous_units = if_then_else(end_roll, empty_units, previous_units)
-    target_units = if_then_else(end_roll, empty_units, target_units)
 
+    end_roll = if_true(dedup(roll_completed(current_units, target_units)))
+    debug_print("end_roll", end_roll)
+    empty_units = const(frozendict(), NotionalUnits)
+    # When the current_units match the target units, we are done, reset the target and previous states.
+    previous_units = if_then_else(modified(end_roll), empty_units, previous_units)
+    target_units = if_then_else(modified(end_roll), empty_units, target_units)
+    debug_print("previous_units:final", previous_units)
+    debug_print("target_units:final", target_units)
+    debug_print("current_position:final", current_position)
     return combine[TSB[IndexStructure]](
         current_position=current_position,
         previous_units=previous_units,
         target_units=target_units,
     )
+
+
+@graph
+def re_compute_level(current_units: NotionalUnits, price: NotionalUnitValues) -> TS[float]:
+    """
+    Re-computes the level from the current unit prices
+    """
+    debug_print("re_compute_level:current_units", current_units)
+    values = map_(lambda a, b: a * b, current_units, no_key(price))
+    debug_print("re_compute_level:values", values)
+    level = reduce(lambda x, y: x + y, values, 0.0)
+    debug_print("re_compute_level:level", level)
+    return level

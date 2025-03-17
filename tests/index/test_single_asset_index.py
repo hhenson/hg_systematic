@@ -53,7 +53,7 @@ def test_single_asset_index():
                 rounding=8,
                 initial_level=100.0,
                 current_position=frozendict({'CLK19 Comdty': 100.0/53.30}),
-                current_position_value=frozendict({'CLK19': 53.30}),
+                current_position_value=frozendict({'CLK19 Comdty': 53.30}),
                 current_level=100.0,
                 start_date=date(2025, 4, 1),
                 asset="CL",
@@ -68,7 +68,7 @@ def test_single_asset_index():
         __start_time__=datetime(2019, 4, 1),
         __end_time__=datetime(2019, 5, 1),
         __elide__=True,
-        #__trace__=True
+        __trace__=True
     )
     print('Result', result)
     assert result
