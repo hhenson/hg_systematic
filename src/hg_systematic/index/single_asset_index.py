@@ -113,7 +113,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     debug_print("out", out)
     # We require prices for the items in the current position at least
     required_prices_fb(out.index_structure.current_position.units.key_set)
-    index_structure_fb(dedup(out.index_structure))
+    index_structure_fb(out.index_structure)
 
     debug_print("level", out.level)
     return out
@@ -184,13 +184,7 @@ def roll_contracts(
         roll_halted,
         {
             True: lambda c, p, p_c, t, t_c, w: c,
-            False: lambda c, p, p_c, t, t_c, w: combine[TSD](
-                keys=combine[TSL](p_c, t_c),
-                tsl=combine[TSL](
-                    p[p_c] * w,  # The remaining previous units
-                    t[t_c] * (1.0 - w)  # The target units to move into
-                )
-            )
+            False: lambda c, p, p_c, t, t_c, w: _roll_contracts(p, t, w)
         },
         current_units,
         previous_units,
@@ -199,6 +193,12 @@ def roll_contracts(
         target_contract,
         roll_weight
     )
+
+@graph
+def _roll_contracts(prev_units: NotionalUnits, target_units: NotionalUnits, weights: TS[float]) -> NotionalUnits:
+    prev = map_(lambda u, w: u * w, prev_units, weights)
+    target = map_(lambda u, w: u * (1.0 - w), target_units, weights)
+    return map_(lambda p, t: default(p, 0.0) + default(t, 0.0), prev, target)
 
 
 @graph
