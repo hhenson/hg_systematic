@@ -4,7 +4,7 @@ from typing import Callable
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default, debug_print, TSD, collect, not_, and_, dedup, lag, or_, if_true, modified
+    default, debug_print, TSD, collect, not_, dedup, lag, or_, if_true, modified
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
