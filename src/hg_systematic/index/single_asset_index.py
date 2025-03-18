@@ -228,7 +228,7 @@ def monthly_single_asset_index_component(
 
     needs_re_balance = dedup(or_(
         # This will initiate a roll, so will set the target units
-        and_(contracts[0] != contracts[1], rolling_info.as_schema.begin_roll),
+        rolling_info.as_schema.begin_roll,
         # Once the roll is complete, the target units are set to an empty dict.
         len_(index_structure.target_units) > 0,
     ))
