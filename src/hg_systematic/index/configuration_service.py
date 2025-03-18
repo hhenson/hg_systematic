@@ -22,4 +22,4 @@ def static_index_configuration(symbol: TSS[str], indices: Mapping[str, IndexConf
     configurations.
     """
     indices = const(indices, TSD[str, TS[IndexConfiguration]])
-    return map_(lambda config: config, indices, __key__=symbol)
+    return map_(lambda config: config, indices, __keys__=symbol)

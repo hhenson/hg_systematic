@@ -34,7 +34,8 @@ def price_index_impl(symbol: TSS[str]) -> TSD[str, TSB[IndexResult]]:
     """
     return mesh_(
         _price_index,
-        __key__=symbol,
+        __keys__=symbol,
+        __key_arg__="symbol",
         __name__=INDEX_MESH
     )
 
