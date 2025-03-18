@@ -637,14 +637,14 @@ holidays = ">=0.56"
 
 [[package]]
 name = "hgraph"
-version = "0.4.8"
+version = "0.4.10"
 description = "A functional reactive platform used to process time-series streams. Provides support for backtest (simulation) and realtime time-series processing. Using a forward propagation graph with a microtask scheduler for the runtime engine. "
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "hgraph-0.4.8-py3-none-any.whl", hash = "sha256:644a4f078f66f6b5c0ad17ace7ee378240902e12fea1dee0ffa0e5ae58eed3f8"},
-    {file = "hgraph-0.4.8.tar.gz", hash = "sha256:a44458ba3cd402a0b23a3b04b9f0a242fc6965fa377e05310104d828954c4dc2"},
+    {file = "hgraph-0.4.10-py3-none-any.whl", hash = "sha256:f1d3a5449b3bda2081abc3c43201a959030f46430ed0c793efd11ff06ed7bce5"},
+    {file = "hgraph-0.4.10.tar.gz", hash = "sha256:f8acdc7a1e79e5c576cf00e80aac40527241fa97a34b837354e438b11d311bf9"},
 ]
 
 [package.dependencies]
@@ -671,14 +671,14 @@ web = ["pandas", "perspective-python (<4.0.0)", "pycurl", "requests", "tornado"]
 
 [[package]]
 name = "holidays"
-version = "0.68"
+version = "0.69"
 description = "Open World Holidays Framework"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "holidays-0.68-py3-none-any.whl", hash = "sha256:368022e67afddb1f60a780b65a0892802f171720812a60955e9c978d81aaca19"},
-    {file = "holidays-0.68.tar.gz", hash = "sha256:c47d19be8bc297ff2ed2ca5d73cc37b47c887d1d85e1ab5e628f19c7c6699b99"},
+    {file = "holidays-0.69-py3-none-any.whl", hash = "sha256:c179b46bc6326978adb24da108cc3cd3cf28c297bc212065a1041bb2fff51b99"},
+    {file = "holidays-0.69.tar.gz", hash = "sha256:7dcd213d9c0a39f492f35c75180b6650522c7131cda9f57107a9c16e9a6c0468"},
 ]
 
 [package.dependencies]
@@ -2086,4 +2086,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "a8b183c39931671560553627531ce646a5f71a5d4dc81fa95165ef83758bc312"
+content-hash = "bca9fad76637d9b156f56b73dd57695270e1f29ddfb06d5f2dffc5542c4a0b56"

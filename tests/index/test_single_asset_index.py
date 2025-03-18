@@ -12,7 +12,7 @@ from hg_systematic.index.pricing_service import IndexResult, price_index_op
 from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration
 from hg_systematic.operators import bbg_commodity_contract_fn
 
-from hgraph.test import eval_node
+from hgraph.test import eval_node, EvaluationTrace
 
 @graph
 def register_services():
@@ -62,6 +62,9 @@ def test_single_asset_index():
                 trading_halt_calendar="CL NonTrading",
                 contract_fn=bbg_commodity_contract_fn
             ))
+
+    EvaluationTrace.set_print_all_values(True)
+    EvaluationTrace.set_use_logger(False)
 
     result = eval_node(
         g,
