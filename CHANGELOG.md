@@ -81,3 +81,8 @@ Version 0.0.16 (03-03-2025)
 ---------------------------
 
 * Expose y, m, d of dt in MonthlyRollingInfo
+
+Version 0.0.19 (18-03-2025)
+---------------------------
+
+* Work on single asset index
