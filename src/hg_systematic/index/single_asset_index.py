@@ -319,7 +319,7 @@ def re_balance_contracts(
                 level=l,
                 unit_values=map_(lambda u, p: p, c_u, no_key(p))
             ),
-            False: lambda c_p, c_u, l, p: c_p
+            False: lambda c_p, c_u, p, l: c_p
         },
         index_structure.current_position,
         current_units,
