@@ -314,16 +314,17 @@ def re_balance_contracts(
     current_position = switch_(
         traded,
         {
-            True: lambda c_p, c_u, p: combine[TSB[IndexPosition]](
+            True: lambda c_p, c_u, p, l: combine[TSB[IndexPosition]](
                 units=c_u,
-                level=level,
+                level=l,
                 unit_values=map_(lambda u, p: p, c_u, no_key(p))
             ),
-            False: lambda c_p, c_u, p: c_p
+            False: lambda c_p, c_u, l, p: c_p
         },
         index_structure.current_position,
         current_units,
-        prices
+        prices,
+        level
     )
     debug_print("current_position:3", current_position)
 
