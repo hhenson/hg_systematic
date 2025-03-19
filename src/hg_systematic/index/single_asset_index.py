@@ -4,7 +4,7 @@ from typing import Callable
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default, debug_print, TSD, collect, not_, dedup, lag, or_, if_true, modified
+    default, debug_print, TSD, collect, not_, dedup, lag, or_, if_true, modified, and_
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -93,7 +93,6 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     debug_print("all_contracts", all_contracts)
 
     prices = map_(lambda key: price_in_dollars(key), __keys__=all_contracts)
-    prices_prev = lag(prices, 1, dt)
     debug_print("prices", prices)
 
     initial_structure_default = initial_structure_from_config(config)
@@ -109,7 +108,6 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         roll_info,
         contracts,
         prices,
-        prices_prev,
         halt_trading
     )
     debug_print("out", out)
@@ -152,7 +150,7 @@ def compute_level(
 
 @graph
 def target_units_from_current(
-        current_contract: TS[str],
+        level: TS[float],
         current_units: TS[float],
         target_contract: TS[str],
         prices: NotionalUnitValues,
@@ -160,8 +158,9 @@ def target_units_from_current(
     """
     Compute the target units from the current contract unit using price weighting.
     """
-    current_value = current_units * passive(prices[current_contract])
-    return collect[TSD](target_contract, current_value / passive(prices[target_contract]))
+    current_value = current_units * passive(prices[target_contract])
+    target_units = level / current_value
+    return collect[TSD](target_contract, target_units)
 
 
 @graph
@@ -216,7 +215,6 @@ def monthly_single_asset_index_component(
         rolling_info: TSB[MonthlyRollingInfo],
         contracts: TSL[TS[str], Size[2]],
         prices: NotionalUnitValues,
-        prices_prev: NotionalUnitValues,
         halt_trading: TS[bool]
 ) -> TSB[IndexResult]:
     """
@@ -236,26 +234,29 @@ def monthly_single_asset_index_component(
         # Once the roll is complete, the target units are set to an empty dict.
         len_(index_structure.target_units) > 0,
     ))
+
+    # If we have already traded this produces an unnecessary computation, but check if we traded again
+    # may be just as expensive and there is less switching involved then.
+    level = compute_level(index_structure.current_position, prices)
+
     debug_print("needs_re_balance", needs_re_balance)
     debug_print("index_structure: pre", index_structure)
     new_index_structure = switch_(
         needs_re_balance,
         {
-            True: lambda i_s, r_i, c, p, p_prev, r_w, h_t: re_balance_contracts(i_s, r_i, c, p, p_prev, r_w, h_t),
-            False: lambda i_s, r_i, c, p, p_prev, r_w, h_t: i_s  # Force a copy of the value when switching
+            True: lambda i_s, r_i, c, p, r_w, h_t, l: re_balance_contracts(i_s, r_i, c, p, r_w, h_t, l),
+            False: lambda i_s, r_i, c, p, r_w, h_t, l: i_s  # Force a copy of the value when switching
         },
         index_structure,
         rolling_info,
         contracts,
         prices,
-        prices_prev,
         rolling_weights,
         halt_trading,
+        level
     )
     debug_print("new_index_structure", new_index_structure)
-    # If we have already traded this produces an unnecessary computation, but check if we traded again
-    # may be just as expensive and there is less switching involved then.
-    level = compute_level(new_index_structure.current_position, prices)
+
     out = combine[TSB[IndexResult]](
         level=level,
         index_structure=new_index_structure
@@ -270,9 +271,9 @@ def re_balance_contracts(
         rolling_info: TSB[MonthlyRollingInfo],
         contracts: TSL[TS[str], Size[2]],
         prices: NotionalUnitValues,
-        prices_prev: NotionalUnitValues,
         rolling_weights: TS[float],
-        halt_trading: TS[bool]
+        halt_trading: TS[bool],
+        level: TS[float],
 ) -> TSB[IndexStructure]:
     # Compute the portfolio change
     re_balance_signal = rolling_info.begin_roll
@@ -281,7 +282,7 @@ def re_balance_contracts(
                                   index_structure.previous_units)
     debug_print("previous_units", previous_units)
     target_units = if_then_else(re_balance_signal, target_units_from_current(
-        contracts[0],
+        level,
         previous_units[contracts[0]],
         contracts[1],
         prices
@@ -291,7 +292,7 @@ def re_balance_contracts(
     current_units = switch_(
         rolling_info.roll_state,
         {
-            CmpResult.LT: lambda c, p, p_c, t, t_c, w, h: c,
+            CmpResult.LT: lambda c, p, p_c, t, t_c, w, h: if_then_else(and_(len_(c) > 1, not_(halt_trading)), t, c),
             CmpResult.EQ: lambda c, p, p_c, t, t_c, w, h: roll_contracts(c, p, p_c, t, t_c, w, h),
             CmpResult.GT: lambda c, p, p_c, t, t_c, w, h: if_then_else(h, c, t)
         },
@@ -301,25 +302,11 @@ def re_balance_contracts(
         target_units,
         contracts[1],
         rolling_weights,
-        halt_trading
+        halt_trading,
     )
     debug_print("current_units:1", current_units)
     # This will roll under normal circumstances, but it is possible that we remain un-transitioned
     # due to trading halts, so we put in protection for this case
-    current_units = switch_(
-        all_(
-            CmpResult.LT == rolling_info.roll_state,
-            len_(current_units) > 1,
-            not halt_trading
-        ),
-        {
-            True: lambda c, t: t,
-            False: lambda c, t: c
-        },
-        current_units,
-        target_units
-    )
-    debug_print("current_units:2", current_units)
 
     # Detect "trade" and update the current positions to reflect said trade
     traded = not_(current_units == index_structure.current_position.units)
@@ -327,17 +314,16 @@ def re_balance_contracts(
     current_position = switch_(
         traded,
         {
-            True: lambda c_p, c_u, p, p_prev: combine[TSB[IndexPosition]](
+            True: lambda c_p, c_u, p: combine[TSB[IndexPosition]](
                 units=c_u,
-                level=re_compute_level(c_p.units, p, p_prev, c_p.level),
+                level=level,
                 unit_values=map_(lambda u, p: p, c_u, no_key(p))
             ),
-            False: lambda c_p, c_u, p, p_prev: dedup(c_p)
+            False: lambda c_p, c_u, p: c_p
         },
         index_structure.current_position,
         current_units,
-        prices,
-        prices_prev
+        prices
     )
     debug_print("current_position:3", current_position)
 
@@ -358,18 +344,3 @@ def re_balance_contracts(
         target_units=target_units,
     )
 
-
-@graph
-def re_compute_level(prev_units: NotionalUnits, price: NotionalUnitValues, price_prev: NotionalUnitValues,
-                     level_prev: TS[float]) -> TS[float]:
-    """
-    Re-computes the level from the current unit prices
-    """
-    returns = map_(lambda p, p_prev: p - p_prev, price, price_prev)
-    debug_print("re_compute_level:returns", returns)
-    debug_print("re_compute_level:current_units", prev_units)
-    values = map_(lambda a, b: a * b, prev_units, no_key(returns, ))
-    debug_print("re_compute_level:values", values)
-    level = reduce(lambda x, y: x + y, values, 0.0) + level_prev
-    debug_print("re_compute_level:level", level)
-    return level
