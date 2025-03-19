@@ -151,15 +151,13 @@ def compute_level(
 @graph
 def target_units_from_current(
         level: TS[float],
-        current_units: TS[float],
         target_contract: TS[str],
         prices: NotionalUnitValues,
 ) -> TSD[str, TS[float]]:
     """
     Compute the target units from the current contract unit using price weighting.
     """
-    current_value = current_units * passive(prices[target_contract])
-    target_units = level / current_value
+    target_units = level / prices[target_contract]
     return collect[TSD](target_contract, target_units)
 
 
@@ -283,7 +281,6 @@ def re_balance_contracts(
     debug_print("previous_units", previous_units)
     target_units = if_then_else(re_balance_signal, target_units_from_current(
         level,
-        previous_units[contracts[0]],
         contracts[1],
         prices
     ), index_structure.target_units)
