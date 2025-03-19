@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hg_systematic"
-version = "0.0.19"
+version = "0.0.20"
 description = """ \
 A library and examples to show how HGraph can be used for systematic trading. \
 """
