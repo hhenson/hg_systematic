@@ -132,7 +132,7 @@ def compute_level(
     debug_print("compute_level:units", current_position.units)
     debug_print("compute_level:unit_values", current_position.unit_values)
     returns = map_(
-        lambda pos_curr, prc_prev, prc_now: (prc_prev - prc_now) * pos_curr,
+        lambda pos_curr, prc_prev, prc_now: (prc_now - prc_prev) * pos_curr,
         current_position.units,
         current_position.unit_values,
         current_price,
