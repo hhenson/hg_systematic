@@ -3,8 +3,8 @@ from typing import Callable
 
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
-    const, union, no_key, reduce, if_then_else, sample, passive, switch_, CmpResult, len_, all_, contains_, \
-    default, debug_print, TSD, collect, not_, dedup, lag, or_, if_true, modified, and_
+    const, union, no_key, reduce, if_then_else, switch_, CmpResult, len_, contains_, \
+    default, debug_print, TSD, collect, not_, dedup, lag, or_, and_, gate
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -327,7 +327,7 @@ def re_balance_contracts(
 
     # Detect the end-roll and adjust as appropriate
 
-    end_roll = dedup(roll_completed(current_units, target_units))
+    end_roll = gate(not_(halt_trading), rolling_info.as_schema.end_roll)
     debug_print("end_roll", end_roll)
     empty_units = const(frozendict(), NotionalUnits)
     # When the current_units match the target units, we are done, reset the target and previous states.
@@ -341,4 +341,3 @@ def re_balance_contracts(
         previous_units=previous_units,
         target_units=target_units,
     )
-

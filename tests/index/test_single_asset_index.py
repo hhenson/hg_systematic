@@ -41,6 +41,7 @@ def _move_back(k, delta) -> str:
     else:
         return f"CL{k[2:3]}{int(k[3:5]) - delta:2d} Comdty"
 
+
 def test_single_asset_index():
 
     @graph
@@ -69,7 +70,7 @@ def test_single_asset_index():
     result = eval_node(
         g,
         __start_time__=datetime(2019, 4, 1),
-        __end_time__=datetime(2019, 5, 1),
+        __end_time__=datetime(2019, 6, 1),
         __elide__=True,
         #__trace__=True
     )
