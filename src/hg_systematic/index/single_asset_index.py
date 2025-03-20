@@ -273,6 +273,10 @@ def re_balance_contracts(
         halt_trading: TS[bool],
         level: TS[float],
 ) -> TSB[IndexStructure]:
+    # Ensure we have a valid value when we enter (This should only enter initially when we re-balance)
+    end_roll = dedup(sample(rolling_info.dt, default(gate(not_(halt_trading), rolling_info.as_schema.end_roll), False)))
+    debug_print("end_roll", end_roll)
+
     # Compute the portfolio change
     # We always re-balance, but the values use will be the last computed values.
     re_balance_signal = rolling_info.begin_roll
@@ -290,9 +294,9 @@ def re_balance_contracts(
     current_units = switch_(
         rolling_info.roll_state,
         {
-            CmpResult.LT: lambda c, p, p_c, t, t_c, w, h: if_then_else(and_(len_(c) > 1, not_(halt_trading)), t, c),
-            CmpResult.EQ: lambda c, p, p_c, t, t_c, w, h: roll_contracts(c, p, p_c, t, t_c, w, h),
-            CmpResult.GT: lambda c, p, p_c, t, t_c, w, h: if_then_else(h, c, t)
+            CmpResult.LT: lambda c, p, p_c, t, t_c, w, h, e_r: if_then_else(e_r, t, c),
+            CmpResult.EQ: lambda c, p, p_c, t, t_c, w, h, e_r: roll_contracts(c, p, p_c, t, t_c, w, h),
+            CmpResult.GT: lambda c, p, p_c, t, t_c, w, h, e_r: if_then_else(h, c, t)
         },
         index_structure.current_position.units,
         previous_units,
@@ -301,6 +305,7 @@ def re_balance_contracts(
         contracts[1],
         rolling_weights,
         halt_trading,
+        end_roll
     )
     debug_print("current_units:1", current_units)
     # This will roll under normal circumstances, but it is possible that we remain un-transitioned
@@ -328,9 +333,6 @@ def re_balance_contracts(
 
     # Detect the end-roll and adjust as appropriate
 
-    # Ensure we have a valid value when we enter (This should only enter initially when we re-balance)
-    end_roll = dedup(sample(rolling_info.dt, default(gate(not_(halt_trading), rolling_info.as_schema.end_roll), False)))
-    debug_print("end_roll", end_roll)
     empty_units = const(frozendict(), NotionalUnits)
     # When the current_units match the target units, we are done, reset the target and previous states.
     previous_units = if_then_else(end_roll, empty_units, previous_units)
