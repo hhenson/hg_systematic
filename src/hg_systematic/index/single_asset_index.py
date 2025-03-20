@@ -274,6 +274,7 @@ def re_balance_contracts(
         level: TS[float],
 ) -> TSB[IndexStructure]:
     # Compute the portfolio change
+    # We always re-balance, but the values use will be the last computed values.
     re_balance_signal = rolling_info.begin_roll
     debug_print("re_balance_signal", re_balance_signal)
     previous_units = if_then_else(re_balance_signal, index_structure.current_position.units,
@@ -327,7 +328,8 @@ def re_balance_contracts(
 
     # Detect the end-roll and adjust as appropriate
 
-    end_roll = gate(not_(halt_trading), rolling_info.as_schema.end_roll)
+    # Ensure we have a valid value when we enter (This should only enter initially when we re-balance)
+    end_roll = default(gate(not_(halt_trading), rolling_info.as_schema.end_roll), False)
     debug_print("end_roll", end_roll)
     empty_units = const(frozendict(), NotionalUnits)
     # When the current_units match the target units, we are done, reset the target and previous states.
