@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from frozendict import frozendict
-from hgraph import debug_print as _debug_print
+from hgraph import debug_print as _debug_print, if_true
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, switch_, CmpResult, len_, contains_, \
     default, TSD, not_, dedup, lag, or_, gate, sample, last_modified_date, convert
@@ -105,7 +105,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     all_contracts = union(combine[TSS[str]](*contracts), required_prices_fb())
     debug_print("all_contracts", all_contracts)
 
-    prices = map_(lambda key, dt_: sample(dt_ >= last_modified_date(p := price_in_dollars(key)), p), __keys__=all_contracts, dt_=dt)
+    prices = map_(lambda key, dt_: sample(if_true(dt_ >= last_modified_date(p := price_in_dollars(key))), p), __keys__=all_contracts, dt_=dt)
     debug_print("prices", prices)
 
     initial_structure_default = initial_structure_from_config(config)
@@ -125,12 +125,11 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     )
     # This could be triggered due to prices ticking on non-publishing days, we only want results that are for the
     # publishing dates.
-    out = dedup(out)
     debug_print("out", out)
     # We require prices for the items in the current position at least
     required_prices_fb(out.index_structure.current_position.units.key_set)
     # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
-    index_structure_fb(out.index_structure)
+    index_structure_fb(dedup(out.index_structure))
 
     debug_print("level", out.level)
     return out
