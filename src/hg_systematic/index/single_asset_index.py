@@ -4,7 +4,9 @@ from typing import Callable
 from frozendict import frozendict
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, switch_, CmpResult, len_, contains_, \
-    default, debug_print, TSD, collect, not_, dedup, lag, or_, and_, gate, sample
+    default, TSD, collect, not_, dedup, lag, or_, and_, gate, sample, last_modified_date, filter_
+
+from hgraph import debug_print as _debug_print
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -12,6 +14,18 @@ from hg_systematic.index.pricing_service import price_index_op, IndexResult
 from hg_systematic.index.units import IndexStructure, IndexPosition, NotionalUnitValues, NotionalUnits
 from hg_systematic.operators import monthly_rolling_info, MonthlyRollingWeightRequest, monthly_rolling_weights, \
     rolling_contracts, price_in_dollars, MonthlyRollingInfo, calendar_for
+
+
+DEBUG_ON = False
+
+def set_single_index_debug_on():
+    global DEBUG_ON
+    DEBUG_ON = True
+
+
+def debug_print(*args, **kwargs):
+    if DEBUG_ON:
+        _debug_print(*args, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -110,9 +124,13 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         prices,
         halt_trading
     )
+    # This could be triggered due to prices ticking on non-publishing days, we only want results that are for the
+    # publishing dates.
+    out = filter_(dt==last_modified_date(out), out)
     debug_print("out", out)
     # We require prices for the items in the current position at least
     required_prices_fb(out.index_structure.current_position.units.key_set)
+    # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
     index_structure_fb(dedup(out.index_structure))
 
     debug_print("level", out.level)
