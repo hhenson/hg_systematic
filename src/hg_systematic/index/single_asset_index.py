@@ -105,7 +105,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     all_contracts = union(combine[TSS[str]](*contracts), required_prices_fb())
     debug_print("all_contracts", all_contracts)
 
-    prices = map_(lambda key, dt_: sample(dt_ == last_modified_date(p := price_in_dollars(key)), p), __keys__=all_contracts, dt_=dt)
+    prices = map_(lambda key, dt_: sample(dt_ >= last_modified_date(p := price_in_dollars(key)), p), __keys__=all_contracts, dt_=dt)
     debug_print("prices", prices)
 
     initial_structure_default = initial_structure_from_config(config)
