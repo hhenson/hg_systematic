@@ -2,11 +2,10 @@ from dataclasses import dataclass
 from typing import Callable
 
 from frozendict import frozendict
+from hgraph import debug_print as _debug_print
 from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
     const, union, no_key, reduce, if_then_else, switch_, CmpResult, len_, contains_, \
-    default, TSD, collect, not_, dedup, lag, or_, and_, gate, sample, last_modified_date, filter_
-
-from hgraph import debug_print as _debug_print
+    default, TSD, not_, dedup, lag, or_, gate, sample, last_modified_date, convert
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.conversion import roll_schedule_to_tsd
@@ -15,8 +14,8 @@ from hg_systematic.index.units import IndexStructure, IndexPosition, NotionalUni
 from hg_systematic.operators import monthly_rolling_info, MonthlyRollingWeightRequest, monthly_rolling_weights, \
     rolling_contracts, price_in_dollars, MonthlyRollingInfo, calendar_for
 
-
 DEBUG_ON = False
+
 
 def set_single_index_debug_on():
     global DEBUG_ON
@@ -106,7 +105,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     all_contracts = union(combine[TSS[str]](*contracts), required_prices_fb())
     debug_print("all_contracts", all_contracts)
 
-    prices = map_(lambda key: price_in_dollars(key), __keys__=all_contracts)
+    prices = map_(lambda key, dt_: sample(dt_ == last_modified_date(p := price_in_dollars(key)), p), __keys__=all_contracts, dt_=dt)
     debug_print("prices", prices)
 
     initial_structure_default = initial_structure_from_config(config)
@@ -126,12 +125,12 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     )
     # This could be triggered due to prices ticking on non-publishing days, we only want results that are for the
     # publishing dates.
-    out = filter_(dt==last_modified_date(out), out)
+    out = dedup(out)
     debug_print("out", out)
     # We require prices for the items in the current position at least
     required_prices_fb(out.index_structure.current_position.units.key_set)
     # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
-    index_structure_fb(dedup(out.index_structure))
+    index_structure_fb(out.index_structure)
 
     debug_print("level", out.level)
     return out
@@ -176,7 +175,7 @@ def target_units_from_current(
     Compute the target units from the current contract unit using price weighting.
     """
     target_units = level / prices[target_contract]
-    return collect[TSD](target_contract, target_units)
+    return convert[TSD](target_contract, target_units)
 
 
 @graph
