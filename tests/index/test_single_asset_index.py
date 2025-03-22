@@ -4,7 +4,7 @@ from importlib import resources as pkg_resources
 import polars as pl
 import polars.selectors as cs
 from frozendict import frozendict
-from hgraph import graph, register_service, default_path, TSB
+from hgraph import graph, register_service, default_path, TSB, DebugContext
 
 from hg_systematic.impl import trade_date_week_days, calendar_for_static, create_market_holidays, \
     price_in_dollars_static_impl, monthly_rolling_info_service_impl, monthly_rolling_weights_impl, business_day_impl
@@ -47,22 +47,23 @@ def test_single_asset_index():
     @graph
     def g() -> TSB[IndexResult]:
         register_services()
-        return price_index_op(
-            config=MonthlySingleAssetIndexConfiguration(
-                symbol="CL Index",
-                publish_holiday_calendar="BCOM",
-                rounding=8,
-                initial_level=100.0,
-                current_position=frozendict({'CLK19 Comdty': 100.0/53.30}),
-                current_position_value=frozendict({'CLK19 Comdty': 53.30}),
-                current_level=100.0,
-                start_date=date(2025, 4, 1),
-                asset="CL",
-                roll_period=(5, 10),
-                roll_schedule=("H0", "H0", "K0", "K0", "N0", "N0", "U0", "U0", "X0", "X0", "F0", "F1"),
-                trading_halt_calendar="CL NonTrading",
-                contract_fn=bbg_commodity_contract_fn
-            ))
+        with DebugContext("[Test]"):
+            return price_index_op(
+                config=MonthlySingleAssetIndexConfiguration(
+                    symbol="CL Index",
+                    publish_holiday_calendar="BCOM",
+                    rounding=8,
+                    initial_level=100.0,
+                    current_position=frozendict({'CLK19 Comdty': 100.0/53.30}),
+                    current_position_value=frozendict({'CLK19 Comdty': 53.30}),
+                    current_level=100.0,
+                    start_date=date(2025, 4, 1),
+                    asset="CL",
+                    roll_period=(5, 10),
+                    roll_schedule=("H0", "H0", "K0", "K0", "N0", "N0", "U0", "U0", "X0", "X0", "F0", "F1"),
+                    trading_halt_calendar="CL NonTrading",
+                    contract_fn=bbg_commodity_contract_fn
+                ))
 
     EvaluationTrace.set_print_all_values(True)
     EvaluationTrace.set_use_logger(False)
