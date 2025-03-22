@@ -271,7 +271,7 @@ def _re_balance(
             False: lambda c_p, c_u, p, l: c_p
         },
         current_position,
-        current_units,
+        rolled_units,
         tsb.prices,
         tsb.level
     )
