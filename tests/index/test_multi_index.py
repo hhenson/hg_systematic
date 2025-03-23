@@ -5,14 +5,14 @@ from importlib import resources as pkg_resources
 import polars as pl
 import polars.selectors as cs
 from frozendict import frozendict
-from hgraph import graph, register_service, default_path, TSB, DebugContext, TSS, TSD, TS, const, map_
+from hgraph import graph, register_service, default_path, TSB, DebugContext, TS, const, map_
 from hgraph.test import eval_node, EvaluationTrace
 
 from hg_systematic.impl import trade_date_week_days, calendar_for_static, create_market_holidays, \
     price_in_dollars_static_impl, monthly_rolling_info_service_impl, monthly_rolling_weights_impl, business_day_impl
 from hg_systematic.index.configuration_service import static_index_configuration
 from hg_systematic.index.multi_index import AnnualMultiIndexConfiguration, multi_index_monthly_rolling_index
-from hg_systematic.index.pricing_service import IndexResult, price_index_op, _price_index_mesh, price_index_impl, \
+from hg_systematic.index.pricing_service import IndexResult, price_index_op, price_index_impl, \
     price_index
 from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration, set_single_index_debug_on
 from hg_systematic.operators import bbg_commodity_contract_fn
