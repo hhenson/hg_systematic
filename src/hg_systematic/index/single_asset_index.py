@@ -2,20 +2,15 @@ from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Callable
 
-from frozendict import frozendict
-from hgraph import debug_print as _debug_print, if_true, DebugContext, TS_SCHEMA
-from hgraph import graph, TS, combine, map_, TSB, Size, TSL, TSS, feedback, \
-    const, union, no_key, if_then_else, switch_, CmpResult, len_, contains_, \
-    default, TSD, not_, dedup, lag, or_, gate, sample, last_modified_date, convert
+from hgraph import graph, TS, combine, map_, TSB, TSS, feedback, \
+    union, TSD, dedup, sample, last_modified_date, convert
+from hgraph import if_true, DebugContext
 
-from hg_systematic.index.configuration import SingleAssetIndexConfiguration, initial_structure_from_config
+from hg_systematic.index.configuration import SingleAssetIndexConfiguration
 from hg_systematic.index.conversion import roll_schedule_to_tsd
-from hg_systematic.index.index_utils import compute_level, get_monthly_rolling_values, needs_re_balance, \
-    re_balance_index, monthly_rolling_index_component
+from hg_systematic.index.index_utils import get_monthly_rolling_values, monthly_rolling_index
 from hg_systematic.index.pricing_service import price_index_op, IndexResult
-from hg_systematic.index.units import IndexStructure, IndexPosition, NotionalUnitValues, NotionalUnits
-from hg_systematic.operators import monthly_rolling_info, MonthlyRollingWeightRequest, monthly_rolling_weights, \
-    rolling_contracts, price_in_dollars, MonthlyRollingInfo, calendar_for
+from hg_systematic.operators import rolling_contracts, price_in_dollars
 
 DEBUG_ON = False
 
@@ -69,11 +64,13 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     the index just needs a price, it is independent of the currency or scale.
     """
     with nullcontext() if DebugContext.instance() is not None or DEBUG_ON is False else DebugContext("[SingleIndex]"):
-        halt_calendar = calendar_for(config.trading_halt_calendar)
-        roll_info, rolling_weights = get_monthly_rolling_values(config)
-        roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
-        asset = config.asset
 
+        # We need the roll_info to compute the contracts, so we get it here
+        roll_info, roll_weight = get_monthly_rolling_values(config)
+
+        roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
+
+        asset = config.asset
         contracts = rolling_contracts(
             roll_info,
             roll_schedule,
@@ -83,8 +80,6 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         DebugContext.print("contracts", contracts)
 
         dt = roll_info.dt
-        halt_trading = dedup(contains_(halt_calendar, dt))
-        DebugContext.print("halt_trading", halt_trading)
 
         required_prices_fb = feedback(TSS[str], frozenset())
         # Join current positions + roll_in / roll_out contract, perhaps this could be reduced to just roll_in?
@@ -94,33 +89,18 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         prices = map_(lambda key, dt_: sample(if_true(dt_ >= last_modified_date(p := price_in_dollars(key))), p), __keys__=all_contracts, dt_=dt)
         DebugContext.print("prices", prices)
 
-        initial_structure_default = initial_structure_from_config(config)
-
-        index_structure_fb = feedback(TSB[IndexStructure])
-        DebugContext.print("index_structure_fb", index_structure_fb())
-        index_structure = dedup(default(lag(index_structure_fb(), 1, dt), initial_structure_default))
-        DebugContext.print("index_structure", index_structure)
-
-        out = monthly_rolling_index_component(
+        out = monthly_rolling_index(
             config,
-            index_structure,
-            rolling_weights,
-            roll_info,
             prices,
-            halt_trading,
-            re_balance_signal_fn=lambda tsb: tsb.roll_info.begin_roll,
             compute_target_units_fn=lambda tsb: convert[TSD](target_contract:=tsb.contracts[1], tsb.level / tsb.prices[target_contract]),
+            roll_weight=roll_weight,  # Supplied to reduce unnecessary computation.
+            roll_info=roll_info,  # Supplied to reduce unnecessary computation.
             contracts=contracts,
         )
-        # This could be triggered due to prices ticking on non-publishing days, we only want results that are for the
-        # publishing dates.
-        DebugContext.print("computed_result", out)
+
         # We require prices for the items in the current position at least
         required_prices_fb(out.index_structure.current_position.units.key_set)
-        # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
-        index_structure_fb(dedup(out.index_structure))
 
-        DebugContext.print("level", out.level)
         return out
 
 

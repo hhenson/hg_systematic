@@ -2,23 +2,101 @@ from typing import TypeVar, Callable
 
 from frozendict import frozendict
 from hgraph import graph, TSB, TS, map_, reduce, dedup, or_, and_, len_, DebugContext, combine, switch_, TS_SCHEMA, \
-    sample, default, gate, not_, if_then_else, CmpResult, no_key, const
+    sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TS_SCHEMA_1, feedback, lag, \
+    contains_
 
-from hg_systematic.index.configuration import IndexConfiguration
+from hg_systematic.index.configuration import IndexConfiguration, initial_structure_from_config
 from hg_systematic.index.pricing_service import IndexResult
 from hg_systematic.index.units import IndexPosition, NotionalUnitValues, IndexStructure, NotionalUnits
 from hg_systematic.operators import MonthlyRollingInfo, monthly_rolling_info, monthly_rolling_weights, \
-    MonthlyRollingWeightRequest
-
+    MonthlyRollingWeightRequest, calendar_for
 
 ROLLING_CONFIG = TypeVar("ROLLING_CONFIG", bound=IndexConfiguration)
+
+
+@graph
+def monthly_rolling_index(
+        config: TS[ROLLING_CONFIG],
+        prices: NotionalUnitValues,
+        compute_target_units_fn: Callable[[TSB[TS_SCHEMA]], NotionalUnitValues],
+        re_balance_signal_fn: Callable[[TSB[TS_SCHEMA]], TS[bool]] = None,
+        _config_tp: type[ROLLING_CONFIG] = AUTO_RESOLVE,
+        _kwargs_tp: type[TS_SCHEMA_1] = AUTO_RESOLVE,
+        **kwargs: TSB[TS_SCHEMA_1]
+) -> TSB[IndexResult]:
+    """
+    Provide the wrapper for wiring in the required data sources for the monthly_rolling_index_component.
+    This makes the assumptions about the data sources that are required and sets up the feedback loops required.
+
+    This item itself cannot be recorded, however, it will call the monthly_rolling_index_component which should be
+    recordable. Ultimately this component should be recordable and point-in-time recoverable.
+
+    If a custom halt_signal is provided (through the kwargs) this is used, alternatively, if the config contains the
+    trading_halt_calendar then this is used to load the specified calendar. If neither of these are provided then
+    the default of False (i.e. never halted) is used.
+
+    Roll info and weights are obtained using the get_monthly_rolling_values function, using the config to extract
+    configuration to retrieve the data, unless supplied as part of the kwargs
+
+    :param config: The configuration for this index.
+    :param prices: The current price of the contracts or the levels of the sub-indices.
+    :param compute_target_units_fn: A function that computes the target units for re-balancing.
+    :param re_balance_signal_fn: A function that returns a signal to trigger re-balancing defaults to None.
+    :param _config_tp: The type of the config, will AUTO_RESOLVE not to be supplied.
+    :param _kwargs_tp: The type of the kwargs, will AUTO_RESOLVE not to be supplied.
+    """
+    cfg_schema = _config_tp.__meta_data_schema__
+    kwargs_schema = _kwargs_tp.__meta_data_schema__
+
+    if "roll_info" in kwargs_schema:
+        if "roll_weight" not in kwargs_schema:
+            raise ValueError("roll_info is provided, but roll_weight is not.")
+        roll_info = kwargs["roll_info"]
+        roll_weight = kwargs["roll_weight"]
+    else:
+        roll_info, roll_weight = get_monthly_rolling_values(config)
+
+    # If a custom halt_trading signal is provide, use it, alternatively if the config has a trading_halt_calendar
+    # use that to feed into a simple contains filter, finally if no other strategy is provided assume no halt signal
+    # and wire in False.
+    halt_trading = kwargs.halt_trading if "halt_trading" in kwargs_schema else \
+        dedup(contains_(calendar_for(config.trading_halt_calendar), roll_info.dt)) if "trading_halt_calendar" in cfg_schema else \
+                  const(False)
+    DebugContext.print("halt_trading", halt_trading)
+
+    if re_balance_signal_fn is None:
+        re_balance_signal_fn = lambda tsb: tsb.roll_info.begin_roll
+
+    index_structure_fb = feedback(TSB[IndexStructure])
+    DebugContext.print("index_structure_fb", index_structure_fb())
+    index_structure = dedup(default(lag(index_structure_fb(), 1, roll_info.dt), initial_structure_from_config(config)))
+    DebugContext.print("index_structure", index_structure)
+
+    out = monthly_rolling_index_component(
+        config,
+        index_structure,
+        roll_weight,
+        roll_info,
+        prices,
+        halt_trading,
+        re_balance_signal_fn=re_balance_signal_fn,
+        compute_target_units_fn=compute_target_units_fn,
+        **{k: kwargs[k] for k in kwargs_schema if k not in {"halt_trading", "roll_info", "roll_weight"}}
+    )
+
+    # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
+    index_structure_fb(dedup(out.index_structure))  # TODO: Find out why not using de-dup causes this to fail.
+
+    DebugContext.print("published level", out.level)
+    return out
+
 
 @graph
 def monthly_rolling_index_component(
         config: TS[ROLLING_CONFIG],
         index_structure: TSB[IndexStructure],
-        rolling_weights: TS[float],
-        rolling_info: TSB[MonthlyRollingInfo],
+        roll_weight: TS[float],
+        roll_info: TSB[MonthlyRollingInfo],
         prices: NotionalUnitValues,
         halt_trading: TS[bool],
         re_balance_signal_fn: Callable[[TSB[TS_SCHEMA]], TS[bool]],
@@ -28,10 +106,12 @@ def monthly_rolling_index_component(
     """
     :param config: The configuration for this index.
     :param index_structure: The current index structure.
-    :param rolling_weights: The weight to transition from previous to current position.
-    :param rolling_info: The rolling information for this index.
+    :param roll_weight: The weight to transition from previous to current position.
+    :param roll_info: The rolling information for this index.
     :param prices: The current price of the contracts of interest
     :param halt_trading: A signal to indicate that trading should be halted.
+    :param re_balance_signal_fn: A function that returns a signal to trigger re-balancing.
+    :param compute_target_units_fn: A function that computes the target units for re-balancing.
     :return: The level and other interim information.
     """
 
@@ -41,9 +121,9 @@ def monthly_rolling_index_component(
 
     new_index_structure = re_balance_index(
         config=config,
-        index_structure = index_structure,
-        roll_info = rolling_info,
-        roll_weight = rolling_weights,
+        index_structure=index_structure,
+        roll_info=roll_info,
+        roll_weight=roll_weight,
         prices=prices,
         level=level,
         trade_halt=halt_trading,
@@ -159,7 +239,7 @@ def re_balance_index(
 
     ::
         @graph
-        def my_re_balance_fn(tsb: TSB[TS_SCHEMA]) -> TSB[IndexStructure]:
+        def my_compute_target_units(tsb: TSB[TS_SCHEMA]) -> TSB[IndexStructure]:
             ...
 
 

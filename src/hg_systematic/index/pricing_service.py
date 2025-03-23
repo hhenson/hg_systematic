@@ -32,6 +32,12 @@ def price_index_impl(symbol: TSS[str]) -> TSD[str, TSB[IndexResult]]:
     The basic structure for implementing the index pricing service. This makes use of the mesh_ operator allowing
     for nested pricing structures.
     """
+    return _price_index_mesh(symbol)
+
+
+@graph
+def _price_index_mesh(symbol: TSS[str]) -> TSD[str, TSB[IndexResult]]:
+    """Separate the mesh impl to make testing easier."""
     return mesh_(
         _price_index,
         __keys__=symbol,
