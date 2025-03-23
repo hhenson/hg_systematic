@@ -12,8 +12,7 @@ from hg_systematic.impl import trade_date_week_days, calendar_for_static, create
     price_in_dollars_static_impl, monthly_rolling_info_service_impl, monthly_rolling_weights_impl, business_day_impl
 from hg_systematic.index.configuration_service import static_index_configuration
 from hg_systematic.index.multi_index import AnnualMultiIndexConfiguration, multi_index_monthly_rolling_index
-from hg_systematic.index.pricing_service import IndexResult, price_index_op, price_index_impl, \
-    price_index
+
 from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration, set_single_index_debug_on
 from hg_systematic.operators import bbg_commodity_contract_fn
 
@@ -21,15 +20,6 @@ from hg_systematic.operators import bbg_commodity_contract_fn
 @dataclass(frozen=True)
 class MyMultiIndexConfiguration(AnnualMultiIndexConfiguration):
     ...
-
-
-@graph(overloads=price_index_op)
-def price_index_op_my(config: TS[MyMultiIndexConfiguration]) -> TSB[IndexResult]:
-    with DebugContext(prefix="[test]"):
-        return multi_index_monthly_rolling_index(
-            config=config,
-            weights_fn=lambda cfg, levels: map_(lambda key: const(0.5), __keys__=levels.key_set)
-        )
 
 INDICES = {
     "My Index": MyMultiIndexConfiguration(
@@ -108,7 +98,6 @@ def register_services():
     register_service(default_path, monthly_rolling_info_service_impl)
     register_service(default_path, monthly_rolling_weights_impl)
     register_service(default_path, static_index_configuration, indices=INDICES)
-    register_service(default_path, price_index_impl)
 
 
 def _move_back(k, delta, symbol="CL") -> str:
@@ -119,9 +108,20 @@ def _move_back(k, delta, symbol="CL") -> str:
 
 
 def test_multi_index():
+    from hg_systematic.index.pricing_service import IndexResult, price_index_op, price_index_impl, \
+        price_index
+    @graph(overloads=price_index_op)
+    def price_index_op_my(config: TS[MyMultiIndexConfiguration]) -> TSB[IndexResult]:
+        with DebugContext(prefix="[test]"):
+            return multi_index_monthly_rolling_index(
+                config=config,
+                weights_fn=lambda cfg, levels: map_(lambda key: const(0.5), __keys__=levels.key_set)
+            )
+
     @graph
     def g(symbol: TS[str]) -> TSB[IndexResult]:
         register_services()
+        register_service(default_path, price_index_impl)
         with DebugContext("[Test]"):
             return price_index(symbol)
 

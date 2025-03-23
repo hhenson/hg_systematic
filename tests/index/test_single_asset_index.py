@@ -8,8 +8,9 @@ from hgraph import graph, register_service, default_path, TSB, DebugContext
 
 from hg_systematic.impl import trade_date_week_days, calendar_for_static, create_market_holidays, \
     price_in_dollars_static_impl, monthly_rolling_info_service_impl, monthly_rolling_weights_impl, business_day_impl
-from hg_systematic.index.pricing_service import IndexResult, price_index_op
-from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration
+
+from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration, \
+    price_monthly_single_asset_index
 from hg_systematic.operators import bbg_commodity_contract_fn
 
 from hgraph.test import eval_node, EvaluationTrace
@@ -43,12 +44,13 @@ def _move_back(k, delta) -> str:
 
 
 def test_single_asset_index():
+    from hg_systematic.index.pricing_service import IndexResult, price_index_op
 
     @graph
     def g() -> TSB[IndexResult]:
         register_services()
         with DebugContext("[Test]"):
-            return price_index_op(
+            return price_monthly_single_asset_index(
                 config=MonthlySingleAssetIndexConfiguration(
                     symbol="CL Index",
                     publish_holiday_calendar="BCOM",
