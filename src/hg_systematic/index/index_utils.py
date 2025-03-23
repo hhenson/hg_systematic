@@ -41,7 +41,7 @@ def monthly_rolling_index(
     :param config: The configuration for this index.
     :param prices: The current price of the contracts or the levels of the sub-indices.
     :param compute_target_units_fn: A function that computes the target units for re-balancing.
-    :param re_balance_signal_fn: A function that returns a signal to trigger re-balancing defaults to None.
+    :param re_balance_signal_fn: A function that returns a signal to filter the monthly re-balance signal.
     :param _config_tp: The type of the config, will AUTO_RESOLVE not to be supplied.
     :param _kwargs_tp: The type of the kwargs, will AUTO_RESOLVE not to be supplied.
     """
@@ -65,7 +65,11 @@ def monthly_rolling_index(
     DebugContext.print("halt_trading", halt_trading)
 
     if re_balance_signal_fn is None:
-        re_balance_signal_fn = lambda tsb: tsb.roll_info.begin_roll
+        if "re_balance_month" in cfg_schema:
+            re_balance_signal_fn = lambda tsb: tsb.config.re_balance_month == tsb.roll_info.roll_out_month
+        else:
+            # Defaults to True
+            re_balance_signal_fn = lambda tsb: const(True)
 
     index_structure_fb = feedback(TSB[IndexStructure])
     DebugContext.print("index_structure_fb", index_structure_fb())

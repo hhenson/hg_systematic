@@ -2,12 +2,11 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Mapping
 
-from frozendict import frozendict as fd
 from hgraph import CompoundScalar, compute_node, TS, TSB
 
 __all__ = ["IndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration", "initial_structure_from_config"]
 
-from hg_systematic.index.units import IndexStructure, NotionalUnits
+from hg_systematic.index.units import IndexStructure
 
 
 @dataclass(frozen=True)
