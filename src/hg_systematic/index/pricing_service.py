@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from hgraph import subscription_service, TSS, TS, TSD, mesh_, graph, service_impl, dispatch_, dispatch, operator, \
-    TimeSeriesSchema, TSB
+    TimeSeriesSchema, TSB, default_path
 
 from hg_systematic.index.configuration import IndexConfiguration
 from hg_systematic.index.configuration_service import index_configuration
@@ -17,7 +17,7 @@ class IndexResult(TimeSeriesSchema):
 
 
 @subscription_service
-def price_index(symbol: TS[str]) -> TSB[IndexResult]:
+def price_index(symbol: TS[str], path: str=default_path) -> TSB[IndexResult]:
     """
     Produce a price for an index.
     """
