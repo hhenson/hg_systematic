@@ -63,14 +63,15 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
     For now use the price_in_dollars service to get prices, but there is no reason to use specifically dollars as
     the index just needs a price, it is independent of the currency or scale.
     """
-    with nullcontext() if DebugContext.instance() is not None or DEBUG_ON is False else DebugContext("[SingleIndex]"):
+    with nullcontext() if DEBUG_ON is False else DebugContext("[SingleIndex]"):
+        DebugContext.print("Starting", config.symbol)
+        DebugContext.print("Asset", asset := config.asset)
 
         # We need the roll_info to compute the contracts, so we get it here
         roll_info, roll_weight = get_monthly_rolling_values(config)
 
         roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
 
-        asset = config.asset
         contracts = rolling_contracts(
             roll_info,
             roll_schedule,

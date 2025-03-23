@@ -5,7 +5,7 @@ from typing import Iterable
 from frozendict import frozendict as fd
 from hgraph import TS, compute_node, \
     graph, service_impl, default_path, contains_, if_true, sample, TSS, TSD, map_, not_, \
-    EvaluationEngineApi, generator, const, index_of
+    EvaluationEngineApi, generator, const, index_of, DebugContext
 
 from hg_systematic.operators._calendar import Periods, business_days, business_day, calendar_for, \
     trade_date, HolidayCalendar, day_index_for
@@ -84,6 +84,7 @@ def calendar_for_static(symbol: TSS[str], holidays: fd[str, frozenset[date]], so
     str, HolidayCalendar]:
     """Provide a simple stub solution to provide holiday calendars from a fixed source of holidays."""
     holidays = const(holidays, tp=TSD[str, TSS[date]])
+    DebugContext.print("[calendar_for] requests", symbol)
     return map_(
         lambda hols: HolidayCalendar.from_ts(holidays=hols, start_of_week=const(sow), end_of_week=const(eow)),
         holidays,

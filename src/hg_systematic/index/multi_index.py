@@ -1,16 +1,12 @@
 from dataclasses import dataclass
 from typing import Callable, TypeVar
 
-from hgraph import TS, TSB, graph, combine, feedback, map_, mesh_, dedup, default, lag, or_, len_, const, and_, \
-    TS_SCHEMA, AUTO_RESOLVE, convert, TSS
+from hgraph import TS, TSB, graph, map_, mesh_, TS_SCHEMA, AUTO_RESOLVE, convert, TSS
 
-from hg_systematic.index.configuration import MultiIndexConfiguration, initial_structure_from_config
-from hg_systematic.index.index_utils import compute_level, DebugContext, needs_re_balance, \
-    monthly_rolling_index_component, monthly_rolling_index
-from hg_systematic.index.pricing_service import price_index_op, IndexResult, INDEX_MESH
-from hg_systematic.index.units import IndexStructure, NotionalUnitValues
-from hg_systematic.operators import monthly_rolling_info, MonthlyRollingWeightRequest, monthly_rolling_weights, \
-    MonthlyRollingInfo
+from hg_systematic.index.configuration import MultiIndexConfiguration
+from hg_systematic.index.index_utils import DebugContext, monthly_rolling_index
+from hg_systematic.index.pricing_service import IndexResult, INDEX_MESH
+from hg_systematic.index.units import NotionalUnitValues
 
 DEBUG_ON = False
 
@@ -76,7 +72,8 @@ def get_sub_levels(config: TS[ROLLING_MULTI_CONFIG]) -> NotionalUnitValues:
     # assuming this is how the main multi-index instrument was constructed.
     # The mesh_ instance is retrieved by name, the INDEX_MESH is the name we expect to be allocated to the main
     # mesh_ instance. We are only interested in the level, so just reference that.
-    levels = map_(lambda key: mesh_(INDEX_MESH)[key].level, __keys__=convert[TSS[str]](config.indices))
+    DebugContext.print("[pricing] Requesting", (keys:=convert[TSS[str]](config.indices)))
+    levels = map_(lambda key: mesh_(INDEX_MESH)[key].level, __keys__=keys)
     DebugContext.print("[pricing] sub-levels", levels)
     return levels
 

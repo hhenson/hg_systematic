@@ -13,7 +13,7 @@ from hg_systematic.impl import trade_date_week_days, calendar_for_static, create
 from hg_systematic.index.configuration_service import static_index_configuration
 from hg_systematic.index.multi_index import AnnualMultiIndexConfiguration, multi_index_monthly_rolling_index
 from hg_systematic.index.pricing_service import IndexResult, price_index_op, _price_index_mesh
-from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration
+from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration, set_single_index_debug_on
 from hg_systematic.operators import bbg_commodity_contract_fn
 
 
@@ -126,13 +126,15 @@ def test_multi_index():
     EvaluationTrace.set_print_all_values(True)
     EvaluationTrace.set_use_logger(False)
 
+    set_single_index_debug_on()
+
     result = eval_node(
         g,
         [{'My Index'}],
         __start_time__=datetime(2019, 4, 1),
         __end_time__=datetime(2019, 6, 1),
         __elide__=True,
-        # __trace__=True
+        __trace__=True
     )
     print('Result', result)
     assert result
