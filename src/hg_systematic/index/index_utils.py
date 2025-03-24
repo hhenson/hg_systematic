@@ -285,7 +285,7 @@ def re_balance_index(
 
 @graph
 def _pass_through(tsb: TSB[TS_SCHEMA]) -> TSB[IndexStructure]:
-    return tsb.index_structure
+    return dedup(tsb.index_structure)  # Required as there seems to be an issue with a simple ref pass through
 
 
 @graph
