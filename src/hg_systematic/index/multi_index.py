@@ -11,7 +11,7 @@ from hg_systematic.index.units import NotionalUnitValues
 DEBUG_ON = False
 
 
-def set_single_index_debug_on():
+def set_multi_index_debug_on():
     global DEBUG_ON
     DEBUG_ON = True
 
