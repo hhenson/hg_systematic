@@ -303,20 +303,22 @@ def _re_balance(
             )
         )
     )
+    rebase_index = roll_info.as_schema.begin_roll
+    DebugContext.print("[re_balance_index] rebase_index", rebase_index)
     DebugContext.print("[re_balance_index] end_roll", end_roll)
     DebugContext.print("[re_balance_index] re_balance_signal", re_balance_signal := tsb.re_balance_signal)
     DebugContext.print("[re_balance_index] roll_weight", roll_weight := tsb.roll_weight)
 
     # Compute the portfolio change
     previous_units = if_then_else(
-        re_balance_signal,
+        rebase_index,
         (current_units := (current_position := (index_structure := tsb.index_structure).current_position).units),
         index_structure.previous_units
     )
     DebugContext.print("[re_balance_index] previous_units", previous_units)
 
     target_units = if_then_else(  # Try and replace with switch
-        re_balance_signal,
+        rebase_index,
         extract_target_units_fn(
             tsb
         ),
