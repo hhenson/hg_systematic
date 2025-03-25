@@ -91,8 +91,9 @@ def monthly_rolling_index(
     # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
     index_structure_fb(dedup(out.index_structure))  # TODO: Find out why not using de-dup causes this to fail.
 
-    DebugContext.print("published level", out.level)
-    return out.copy_with(level=round_(out.level, config.rounding))
+    result = out.copy_with(level=round_(out.level, config.rounding))
+    DebugContext.print("published level", result.level)
+    return result
 
 
 @graph
