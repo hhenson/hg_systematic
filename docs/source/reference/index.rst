@@ -1,0 +1,6 @@
+HGraph Reference
+================
+
+.. toctree::
+    operators
+
