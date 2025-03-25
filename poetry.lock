@@ -637,14 +637,14 @@ holidays = ">=0.56"
 
 [[package]]
 name = "hgraph"
-version = "0.4.15"
+version = "0.4.17"
 description = "A functional reactive platform used to process time-series streams. Provides support for backtest (simulation) and realtime time-series processing. Using a forward propagation graph with a microtask scheduler for the runtime engine. "
 optional = false
 python-versions = ">=3.11"
 groups = ["main"]
 files = [
-    {file = "hgraph-0.4.15-py3-none-any.whl", hash = "sha256:9635c765aa48d8254746b6be382d4fa73336b450cfa509c77973962bce990175"},
-    {file = "hgraph-0.4.15.tar.gz", hash = "sha256:101b7e5c25d7b10b402746af8e52cbf9f1c43d178fa4140ccb8698dc502498c9"},
+    {file = "hgraph-0.4.17-py3-none-any.whl", hash = "sha256:2b9341d6ec52d47bad83b3a95f0963b86434b9d760ab84fc5418c3d3abcf3b13"},
+    {file = "hgraph-0.4.17.tar.gz", hash = "sha256:7fb95d07ca1fdcfbf1cf32c1bc5fec1ca999407a577c9023f7d3f9da84223422"},
 ]
 
 [package.dependencies]
@@ -1633,14 +1633,14 @@ six = ">=1.5"
 
 [[package]]
 name = "pytz"
-version = "2025.1"
+version = "2025.2"
 description = "World timezone definitions, modern and historical"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "pytz-2025.1-py2.py3-none-any.whl", hash = "sha256:89dd22dca55b46eac6eda23b2d72721bf1bdfef212645d81513ef5d03038de57"},
-    {file = "pytz-2025.1.tar.gz", hash = "sha256:c2db42be2a2518b28e65f9207c4d05e6ff547d1efa4086469ef855e4ab70178e"},
+    {file = "pytz-2025.2-py2.py3-none-any.whl", hash = "sha256:5ddf76296dd8c44c26eb8f4b6f35488f3ccbf6fbbd7adee0b7262d43f0ec2f00"},
+    {file = "pytz-2025.2.tar.gz", hash = "sha256:360b9e3dbb49a209c21ad61809c7fb453643e048b38924c765813546746e81c3"},
 ]
 
 [[package]]
@@ -2086,4 +2086,4 @@ zstd = ["zstandard (>=0.18.0)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11"
-content-hash = "cfe38cb939f2d16c0d7d2193fe22eec3dfd5807ac7db9b250056cf8d2e4a8850"
+content-hash = "0916facf27ce52533aeb26763fd5129a15f9848d297910e3758fd21ac1c93828"

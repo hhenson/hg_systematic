@@ -3,7 +3,7 @@ from typing import TypeVar, Callable
 from frozendict import frozendict
 from hgraph import graph, TSB, TS, map_, reduce, dedup, or_, and_, len_, DebugContext, combine, switch_, TS_SCHEMA, \
     sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TS_SCHEMA_1, feedback, lag, \
-    contains_
+    contains_, round_
 
 from hg_systematic.index.configuration import IndexConfiguration, initial_structure_from_config
 from hg_systematic.index.pricing_service import IndexResult
@@ -92,7 +92,7 @@ def monthly_rolling_index(
     index_structure_fb(dedup(out.index_structure))  # TODO: Find out why not using de-dup causes this to fail.
 
     DebugContext.print("published level", out.level)
-    return out
+    return out.copy_with(level=round_(out.level, config.rounding))
 
 
 @graph
@@ -152,7 +152,7 @@ def compute_level(
     Compute the level from the current positions and the last re-balance level
     """
     DebugContext.print("[compute_level] current_positions", current_position)
-    DebugContext.print("[compute_level] compute_value", current_value)
+    DebugContext.print("[compute_level] current_value", current_value)
     returns = map_(
         lambda pos_curr, prc_prev, prc_now: (prc_now - prc_prev) * pos_curr,
         current_position.units,

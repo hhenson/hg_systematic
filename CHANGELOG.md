@@ -86,3 +86,8 @@ Version 0.0.19 (18-03-2025)
 ---------------------------
 
 * Work on single asset index
+
+Version 0.0.28 (25-03-2025)
+---------------------------
+
+* Index calculation logic completed for Multi index and Single asset indices.

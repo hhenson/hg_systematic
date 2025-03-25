@@ -1,7 +1,7 @@
 from typing import cast, Mapping
 
 from hgraph import compute_node, cmp_, TS, TSB, CmpResult, service_impl, TSS, TSD, default_path, graph, map_, index_of, \
-    switch_, len_, lift, const, cast_, if_then_else, explode
+    switch_, len_, lift, const, cast_, if_then_else, explode, round_
 
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, business_day, \
     MonthlyRollingWeightRequest, calendar_for, business_days, Periods
@@ -94,8 +94,7 @@ def _monthly_rolling_weight(
         roll_fraction,
     )
 
-    round_ = lift(round, inputs={"number": TS[float], "ndigits": TS[int]}, output=TS[float])
-    return round_(number=weight, ndigits=request.round_to)
+    return round_(weight, request.round_to)
 
 
 @graph
