@@ -5,7 +5,7 @@ from hgraph import TimeSeriesSchema, TSS, subscription_service, TS, default_path
     compute_node, contains_, graph, TIME_SERIES_TYPE, last_modified_date, sample, if_true, not_
 
 __all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", "business_day", "HolidayCalendar",
-           "filter_by_calendar", "day_index_for"]
+           "filter_by_calendar", "day_index_for", "trade_date", "next_month"]
 
 
 class HolidayCalendarSchema(TimeSeriesSchema):
