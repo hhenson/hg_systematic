@@ -13,3 +13,4 @@ Contents
     Home <self>
     concepts/index
     reference/index
+    references

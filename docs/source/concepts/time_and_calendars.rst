@@ -115,8 +115,7 @@ holidays
     about (or is configured to load) and can support point-in-time adjustments as the graph is evaluated to adjust
     the holidays based on when the calendar data became available.
 
-start_of_week
-end_of_week
+start_of_week, end_of_week
     The first and last days of the week, the days are 0 based with 0 being considered as Monday.
     sow and eow values are also point-in-time and will align to the current evaluation time. So in the UAE, the
     sow and eow would change when it moved from a Sun-Thurs week to a Mon-Fri work week.
@@ -125,5 +124,109 @@ Different types of calendars can be placed on different paths, for example, by d
 host the trade calendar. The ``"settlement_calendar"`` path would hold settlement holiday calendars, etc.
 
 
-.. bibliography::
-   :cited:
+Historical Values
+-----------------
+
+It is often a requirement to use historical values as part of the computation, either values that we receive as inputs
+or values that have been computed.
+
+A very simple example would be computing returns, this can be expressed as:
+
+.. math::
+
+    r_{pct} = \frac{p_{t}}{p_{t-1}}-1
+
+In this case we require the current price and the previous business days price. To do this we can use the ``lag``
+operator.
+
+::
+
+    @graph
+    def return_pct(price: TS[float]) -> TS[float]:
+        return price / lag(price, 1) - 1.0
+
+The ``lag`` operator will delay the release of a value. In this case we are delaying it by one tick, that is when
+the price is updated, the previous updated value is released. This works really well in backtest where the next
+price is always available, however, in production or in scenarios where we need to delay a value for say a business
+day, this does not work. For example, we are computing returns on a schedule, but one of the prices did not tick (say
+due to a holiday) then we will not compute a return.
+
+Lag also has an option to delay by a specified time, but that does not take into account the difference between days
+and business days (i.e. the next day could be a weekend), additionally it is very convenient to align the computation
+to a marker. To assist with this, there is another mechanism to lag the price, namely using the proxy lag option.
+
+This is how we could adjust the computation:
+
+::
+
+    @graph
+    def return_pct(price: TS[float]) -> TS[float]:
+        return price / lag(price, 1, trade_date()) - 1.0
+
+This form of lag uses a proxy time-series to release the lagged value. This will capture the price and after the price
+was captured the next time the proxy (in this case ``trade_date()``) ticks even if the price does not tick.
+
+The up side of this is that the price is now released on :math:`t-1` as required for the formula.
+
+For values that were computed we need to make use of the ``feedback`` operator. This can be performed in conjunction
+with the ``lag`` operator, but for this example we will consider it without.
+
+For example:
+
+::
+
+    @graph
+    def compute_index(symbol: TS[str], prices: TSD[str, TS[float]]) -> TS[float]:
+        level_fb = feedback(TS[float])
+        level = compute_level(prices, prev_level=level_fb())
+        level_fb(level)
+        return level
+
+This computes the level, which is a path dependant computation, thus requiring the previously computed value to
+be provided as an input. The ``feedback`` makes the value available on the next engine cycle (by default 1 micro-second)
+
+When computing a value using a previous value, it is important to avoid re-computing the value when the ``feedback``
+ticks on the next engine cycle. This can be achieved in two possible ways, when using value inside of a graph, use the
+``passive`` marker. This ensures that code the time-series is fed into marks the input as passive. For example:
+
+::
+
+    @graph
+    def compute_level(prices: TSD[str, TS[float], prev_level: TS[float]) -> TS[float]:
+        abs_return = ...
+        return abs_return + passive(prev_return)
+
+This will result in a new ticks being generated only when the ``abs_return`` ticks.
+
+The other option is when using a ``compute_node`` or ``sink_node``, in this case use the ``active`` attribute to exclude
+the input from causing the code to be activated, for example:
+
+::
+
+    @compute_node(active=("prices",))
+    def compute_level(prices: TSD[str, TS[float], prev_level: TS[float]) -> TS[float]:
+        ...
+
+In this case the node will only be evaluated when the prices input is modified.
+
+When this rule is not followed, the graph is likely to go into a tight loop computing values and then feeding them
+back into the graph. If this were a recursive function we would eventually blow the stack, but since this is not, the
+graph just cycles and appears to be stuck. This is a classic issue that can be very annoying.
+
+Combining a ``feedback`` with a lag is a fantastic way to create better timing alignment for computations, thus using
+the proxy lag will ensure the the previously computed value is fed into the graph at the next appropriate computation
+cycle based on the proxy input. Using the previous example, this could look as follows:
+
+::
+
+    @graph
+    def compute_index(symbol: TS[str], prices: TSD[str, TS[float]]) -> TS[float]:
+        level_fb = feedback(TS[float])
+        dt = business_day(symbol)
+        level = compute_level(prices, prev_level=lag(level_fb(), 1, dt))
+        level_fb(level)
+        return level
+
+In this approach we do not need to mark the previous value as being ``passive`` as it will only tick when the next
+appropriate computation cycle is started.
+

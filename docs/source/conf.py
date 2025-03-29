@@ -30,6 +30,8 @@ extensions = [
     "sphinxcontrib.plantuml",
     "sphinx.ext.graphviz",
     'sphinxcontrib.bibtex',
+    'sphinx.ext.mathjax',  # For HTML
+    'sphinx.ext.imgmath',
 ]
 
 intersphinx_mapping = {
