@@ -85,7 +85,8 @@ When back-testing using pre-canned data, holidays calendars do not seem overly u
 raw data if there was a value or not. However, when creating simulations that do not use pre-canned data or when computing
 forward looking values (such as a payout schedule) the holiday calendar is required.
 
-There are many different types of holiday calendars, these include: settlement, trading, currency, and country calendars.
+There are many different types of holiday calendars, these include: settlement, trading, currency, exchange, and
+country calendars.
 
 The choice of calendar is important to correctly model trade behaviour.
 
