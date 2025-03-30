@@ -6,6 +6,7 @@ HGraph platform.
 
 .. toctree::
     time_and_calendars
+    formula
     backtesting_concepts
 
 
