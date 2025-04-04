@@ -10,12 +10,13 @@ __all__ = ["HolidayCalendarSchema", "calendar_for", "Periods", "business_days", 
 
 class HolidayCalendarSchema(TimeSeriesSchema):
     """
-    The typical schema here is to track holidays and the start and end of the week. With the days between
+    The schema is to track holidays and the start and end of the week. With the days between
     start of week and end of week being weekends or non-working days.
     If this is not appropriate the logic should also be able to cope with no-weekends specified (i.e. sow and eow being
     monday and sunday respectively) and any actual weekends being encoded in the holidays. This supports a more flexible
     specification that supports weekends shifting (as is the case with the UAE recently).
-    Alternatively the calendar could be adjusted using the point-in-time of the engine clock.
+    Alternatively the calendar could be adjusted using the point-in-time of the engine clock and adjusting the
+    sow and eow time-series values as appropriate.
     This is an implementation choice and needs to be clearly specified so the user can make an appropriate decision.
     """
     holidays: TSS[date]
@@ -23,7 +24,7 @@ class HolidayCalendarSchema(TimeSeriesSchema):
     end_of_week: TS[int]
 
 
-HolidayCalendar = TSB[HolidayCalendarSchema]
+HolidayCalendar: TSB[HolidayCalendarSchema] = TSB[HolidayCalendarSchema]
 
 
 @subscription_service

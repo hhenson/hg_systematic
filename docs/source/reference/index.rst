@@ -1,6 +1,6 @@
-HGraph Reference
-================
+Reference
+=========
 
 .. toctree::
-    operators
+    calendar_and_date_operators
 
