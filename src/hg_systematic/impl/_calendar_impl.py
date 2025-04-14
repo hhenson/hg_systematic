@@ -10,8 +10,8 @@ from hgraph import TS, compute_node, \
 from hg_systematic.operators._calendar import Periods, business_days, business_day, calendar_for, \
     trade_date, HolidayCalendar, day_index_for
 
-__all__ = ["business_day_impl", "trade_date_week_days", "calendar_for_static", "create_market_holidays",
-           "holiday_const", "day_index_for_impl"]
+__all__ = ["business_day_impl", "business_days_impl", "trade_date_week_days", "calendar_for_static", "create_market_holidays",
+           "holiday_const", "day_index_for_impl",]
 
 
 @compute_node(overloads=business_days)
