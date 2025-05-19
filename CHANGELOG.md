@@ -91,3 +91,8 @@ Version 0.0.28 (25-03-2025)
 ---------------------------
 
 * Index calculation logic completed for Multi index and Single asset indices.
+
+Version 0.0.30 (19-05-2025)
+---------------------------
+
+* Bug fix on trade date generation
