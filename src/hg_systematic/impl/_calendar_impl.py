@@ -72,10 +72,11 @@ def trade_date_week_days(sow: int = 0, eow: int = 4, _api: EvaluationEngineApi =
     then supply the appropriate start and end of week.
     """
     dt = _api.start_time.date()
+    st = _api.start_time
     end_date = _api.end_time.date()
     while dt <= end_date:
         if sow <= dt.weekday() <= eow:
-            yield datetime(dt.year, dt.month, dt.day), dt
+            yield max(datetime(dt.year, dt.month, dt.day), st), dt
         dt += timedelta(days=1)
 
 
