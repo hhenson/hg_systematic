@@ -96,3 +96,8 @@ Version 0.0.30 (19-05-2025)
 ---------------------------
 
 * Bug fix on trade date generation
+
+Version 0.0.31 (21-05-2025)
+---------------------------
+
+* Update to support fixed weight multi-index
