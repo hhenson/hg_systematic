@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Callable, TypeVar
 
-from hgraph import TS, TSB, graph, map_, mesh_, TS_SCHEMA, AUTO_RESOLVE, convert, TSS
+from hgraph import TS, TSB, graph, map_, mesh_, TS_SCHEMA, AUTO_RESOLVE, convert, TSS, TSD, compute_node
 
 from hg_systematic.index.configuration import MultiIndexConfiguration
 from hg_systematic.index.index_utils import DebugContext, monthly_rolling_index
-from hg_systematic.index.pricing_service import IndexResult, INDEX_MESH
+from hg_systematic.index.pricing_service import IndexResult, INDEX_MESH, price_index_op
 from hg_systematic.index.units import NotionalUnitValues
 
 DEBUG_ON = False
@@ -20,6 +20,11 @@ def set_multi_index_debug_on():
 class MonthlyRollingMultiIndexConfiguration(MultiIndexConfiguration):
     roll_period: tuple[int, int] = None
     roll_rounding: int = 8
+
+
+@dataclass(frozen=True)
+class MonthlyRollingMultiIndexFixedWeightConfiguration(MonthlyRollingMultiIndexConfiguration):
+    weights: tuple[float, ...] = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +43,21 @@ ROLLING_MULTI_CONFIG = TypeVar("ROLLING_MULTI_CONFIG", bound=MultiIndexConfigura
 #         monthly_rolling_index(
 #             config=config,
 #         )
+
+@graph(overloads=price_index_op)
+def price_monthly_multi_index(config: TS[MonthlyRollingMultiIndexFixedWeightConfiguration]) -> TSB[IndexResult]:
+    """Can price all monthly rolling indices."""
+    with DebugContext(prefix="[MonthlyRollingMultiIndexFixedWeightConfiguration]", debug=DEBUG_ON):
+        return multi_index_monthly_rolling_index(
+            config=config,
+            weights_fn=_fixed_weight_fn,
+        )
+
+
+@compute_node
+def _fixed_weight_fn(config: TS[MonthlyRollingMultiIndexFixedWeightConfiguration], sub_levels: NotionalUnitValues) -> TSD[str, TS[float]]:
+    config = config.value
+    return {k: v for k, v in zip(config.indices, config.weights)}
 
 
 @graph
