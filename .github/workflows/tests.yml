@@ -19,16 +19,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.11'
 
       - name: Ensure latest pip
         run: python -m pip install --upgrade pip
 
-      - name: Install poetry
-        run: pip install poetry
+      - name: Install uv
+        run: pip install uv
 
       - name: Install dependencies
-        run: poetry install --all-extras
+        run: uv sync --all-extras --all-groups
 
       - name: Run tests
-        run: poetry run pytest --cov=hg_systematic -cov-report=xml
+        run: uv run pytest -ra -q --dist=loadscope --cov=hgraph --cov-report=xml
