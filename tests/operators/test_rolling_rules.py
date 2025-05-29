@@ -10,7 +10,7 @@ from hg_systematic.impl import calendar_for_static, business_day_impl, trade_dat
     monthly_rolling_weights_impl, rolling_schedules_service_impl
 from hg_systematic.impl._rolling_rules_impl import monthly_rolling_info_service_impl
 from hg_systematic.operators import MonthlyRollingRange, monthly_rolling_weights, MonthlyRollingWeightRequest
-from hg_systematic.operators._rolling_rules import rolling_contracts, rolling_schedules, \
+from hg_systematic.operators._rolling_rules import futures_rolling_contracts, rolling_schedules, \
     bbg_commodity_contract_fn, monthly_rolling_info, MonthlyRollingRequest
 
 
@@ -81,7 +81,7 @@ def roll_contracts_(
 
     request = combine[TS[MonthlyRollingRequest]](start=start, end=end, calendar_name="BCOM")
     rolling_info = monthly_rolling_info(request)
-    contracts = rolling_contracts(
+    contracts = futures_rolling_contracts(
         rolling_info,
         rolling_schedules()['GC'],
         'GC',

@@ -3,14 +3,15 @@ from dataclasses import dataclass
 from typing import Callable
 
 from hgraph import graph, TS, combine, map_, TSB, TSS, feedback, \
-    union, TSD, dedup, sample, last_modified_date, convert
+    union, TSD, dedup, sample, last_modified_date, convert, dispatch, TSL, Size, nothing
 from hgraph import if_true, DebugContext
 
 from hg_systematic.index.configuration import SingleAssetIndexConfiguration
 from hg_systematic.index.conversion import roll_schedule_to_tsd
 from hg_systematic.index.index_utils import get_monthly_rolling_values, monthly_rolling_index
 from hg_systematic.index.pricing_service import price_index_op, IndexResult
-from hg_systematic.operators import rolling_contracts, price_in_dollars
+from hg_systematic.operators import futures_rolling_contracts, price_in_dollars, MonthlyRollingInfo
+from hg_systematic.operators._rolling_rules import spread_rolling_contracts
 
 DEBUG_ON = False
 
@@ -56,6 +57,43 @@ class MonthlySingleAssetIndexConfiguration(SingleAssetIndexConfiguration):
     contract_fn: Callable[[str, int, int], str] = None
 
 
+@dataclass(frozen=True)
+class MonthlySpreadSingleAssetIndexConfiguration(MonthlySingleAssetIndexConfiguration):
+    """
+    The spread uses the near leg to be the roll_schedule, the far leg is defined using the far leg roll schedule.
+    """
+    far_leg_roll_schedule: tuple[str, ...] = None
+    contract_fn: Callable[[str, int, int, int, int], str] = None
+
+
+@dispatch(on=("config",))
+def rolling_contract(config: TS[MonthlySingleAssetIndexConfiguration], asset: TS[str],
+                     roll_info: TSB[MonthlyRollingInfo]) -> TSL[TS[str], Size[2]]:
+    roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
+
+    return futures_rolling_contracts(
+        roll_info,
+        roll_schedule,
+        asset,
+        config.contract_fn
+    )
+
+
+@graph(overloads=rolling_contract)
+def rolling_spread_contract(config: TS[MonthlySingleAssetIndexConfiguration], asset: TS[str],
+                     roll_info: TSB[MonthlyRollingInfo]) -> TSL[TS[str], Size[2]]:
+    roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
+    far_roll_schedule = roll_schedule_to_tsd(config.far_leg_roll_schedule)
+
+    return spread_rolling_contracts(
+        roll_info,
+        roll_schedule,
+        far_roll_schedule,
+        asset,
+        config.contract_fn
+    )
+
+
 @graph(overloads=price_index_op)
 def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfiguration]) -> TSB[IndexResult]:
     """
@@ -70,14 +108,7 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         # We need the roll_info to compute the contracts, so we get it here
         roll_info, roll_weight = get_monthly_rolling_values(config)
 
-        roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
-
-        contracts = rolling_contracts(
-            roll_info,
-            roll_schedule,
-            asset,
-            config.contract_fn
-        )
+        contracts = rolling_contract(config, asset, roll_info)
         DebugContext.print("contracts", contracts)
 
         dt = roll_info.dt
@@ -87,13 +118,15 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         all_contracts = union(combine[TSS[str]](*contracts), required_prices_fb())
         DebugContext.print("all_contracts", all_contracts)
 
-        prices = map_(lambda key, dt_: sample(if_true(dt_ >= last_modified_date(p := price_in_dollars(key))), p), __keys__=all_contracts, dt_=dt)
+        prices = map_(lambda key, dt_: sample(if_true(dt_ >= last_modified_date(p := price_in_dollars(key))), p),
+                      __keys__=all_contracts, dt_=dt)
         DebugContext.print("prices", prices)
 
         out = monthly_rolling_index(
             config,
             prices,
-            compute_target_units_fn=lambda tsb: convert[TSD](target_contract:=tsb.contracts[1], tsb.level / tsb.prices[target_contract]),
+            compute_target_units_fn=lambda tsb: convert[TSD](target_contract := tsb.contracts[1],
+                                                             tsb.level / tsb.prices[target_contract]),
             roll_weight=roll_weight,  # Supplied to reduce unnecessary computation.
             roll_info=roll_info,  # Supplied to reduce unnecessary computation.
             contracts=contracts,
@@ -103,5 +136,3 @@ def price_monthly_single_asset_index(config: TS[MonthlySingleAssetIndexConfigura
         required_prices_fb(out.index_structure.current_position.units.key_set)
 
         return out
-
-

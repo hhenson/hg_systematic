@@ -19,7 +19,7 @@ from hg_systematic.operators import index_composition, index_rolling_contracts, 
     index_rolling_weight, business_days, Periods, \
     HolidayCalendar, symbol_is, INDEX_ROLL_FLOAT, INDEX_ROLL_STR
 from hg_systematic.operators._rolling_rules import monthly_rolling_info, MonthlyRollingRequest, \
-    rolling_contracts, bbg_commodity_contract_fn
+    futures_rolling_contracts, bbg_commodity_contract_fn
 
 
 @graph(overloads=index_rolling_weight, requires=symbol_is("BCOM Index"))
@@ -81,7 +81,7 @@ def index_rolling_contracts_bcom(symbol: str, dt: TS, calendar: HolidayCalendar)
         request=MonthlyRollingRequest(5, 10, "BCOM")
     )
     contracts = map_(
-        lambda asset, ri, rs, c_fn: rolling_contracts(ri, rs, asset, c_fn),
+        lambda asset, ri, rs, c_fn: futures_rolling_contracts(ri, rs, asset, c_fn),
         rolling_info,
         roll_schedule,
         bbg_commodity_contract_fn,

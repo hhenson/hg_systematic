@@ -7,7 +7,7 @@ from hgraph import TimeSeriesSchema, TS, subscription_service, default_path, Com
     CmpResult, reference_service, format_, lift, compute_node, apply
 
 __all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingRequest", "MonthlyRollingWeightRequest",
-           "monthly_rolling_info", "MonthlyRollingInfo", "rolling_contracts", "bbg_commodity_contract_fn",
+           "monthly_rolling_info", "MonthlyRollingInfo", "futures_rolling_contracts", "bbg_commodity_contract_fn",
            "rolling_schedules"]
 
 
@@ -82,7 +82,7 @@ def monthly_rolling_info(request: TS[MonthlyRollingRequest], path: str = default
 
 
 @graph
-def rolling_contracts(
+def futures_rolling_contracts(
         roll_info: TSB[MonthlyRollingInfo],
         roll_schedule: TSD[int, TS[tuple[int, int]]],
         asset: TS[str],
@@ -111,7 +111,7 @@ def rolling_contracts(
     m2 = roll_info.roll_in_month
     y2 = roll_info.roll_in_year
 
-    c1_m = _create_contract(
+    c1_m = _create_future_contract(
         month=m1,
         year=y1,
         schedule=roll_schedule,
@@ -119,7 +119,7 @@ def rolling_contracts(
         contract_fn=contract_fn
     )
 
-    c2_m = _create_contract(
+    c2_m = _create_future_contract(
         month=m2,
         year=y2,
         schedule=roll_schedule,
@@ -131,7 +131,59 @@ def rolling_contracts(
 
 
 @graph
-def _create_contract(
+def spread_rolling_contracts(
+        roll_info: TSB[MonthlyRollingInfo],
+        roll_schedule: TSD[int, TS[tuple[int, int]]],
+        far_roll_schedule: TSD[int, TS[tuple[int, int]]],
+        asset: TS[str],
+        contract_fn: TS[Callable[[TS[str], TS[int], TS[int], TS[int], TS[int]], TS[str]]],
+) -> TSL[TS[str], Size[2]]:
+    """
+    The contracts for the given roll_info and contract_fn.
+
+    The ``contract_fn`` converts the month and year into a string for the name.
+    For example:
+
+    ::
+
+        @graph
+        def bbg_commodity_contract_fn(asset: TS[str], month: TS[str], year: TS[int]) -> TS[str]:
+            y = year % 100
+            return format_(
+                "{asset}{month}{year} Comdty",
+                month=lift(month_code, inputs={"d": TS[int]})(month),
+                year=y
+            )
+
+    """
+    m1 = roll_info.roll_out_month
+    y1 = roll_info.roll_out_year
+    m2 = roll_info.roll_in_month
+    y2 = roll_info.roll_in_year
+
+    c1_m = _create_spread_contract(
+        month=m1,
+        year=y1,
+        schedule=roll_schedule,
+        far_schedule=far_roll_schedule,
+        asset=asset,
+        contract_fn=contract_fn
+    )
+
+    c2_m = _create_spread_contract(
+        month=m2,
+        year=y2,
+        schedule=roll_schedule,
+        far_schedule=far_roll_schedule,
+        asset=asset,
+        contract_fn=contract_fn
+    )
+
+    return TSL.from_ts(c1_m, c2_m)
+
+
+@graph
+def _create_future_contract(
         month: TS[int],
         year: TS[int],
         schedule: TSD[int, TS[tuple[int, int]]],
@@ -143,6 +195,23 @@ def _create_contract(
     return apply[TS[str]](contract_fn, asset, m, y)
 
 
+@graph
+def _create_spread_contract(
+        month: TS[int],
+        year: TS[int],
+        schedule: TSD[int, TS[tuple[int, int]]],
+        far_schedule: TSD[int, TS[tuple[int, int]]],
+        asset: TS[str],
+        contract_fn: TS[Callable[[TS[str], TS[int], TS[int], TS[int], TS[int]], TS[str]]]) -> TS[str]:
+    s = schedule[month]
+    m = s[0]
+    y = year + s[1]
+    f_s = far_schedule[month]
+    f_m = f_s[0]
+    f_y = year + f_s[1]
+    return apply[TS[str]](contract_fn, asset, m, y, f_m, f_y)
+
+
 @reference_service
 def rolling_schedules(path: str = default_path) -> TSD[str, TSD[int, TS[tuple[int, int]]]]:
     """
@@ -150,5 +219,15 @@ def rolling_schedules(path: str = default_path) -> TSD[str, TSD[int, TS[tuple[in
     """
 
 
-def bbg_commodity_contract_fn(asset: str, month: int, year: int) -> str:
-    return f"{asset}{month_code(month)}{year % 100:02d} Comdty"
+# NOTE: Mostly BBG uses a single digit year identifier, but using 2 makes it scale a bit further in time.
+
+def bbg_commodity_contract_fn(asset: str, month: int, year: int, use_single_digit_year: bool = False) -> str:
+    yr = f"{year % 10:1d}" if use_single_digit_year else f"{year % 100:02d}"
+    return f"{asset}{month_code(month)}{yr} Comdty"
+
+
+def bbg_commodity_spread_contract_fn(asset: str, month: int, year: int, far_month: int, far_year: int,
+                                     use_single_digit_year: bool = False) -> str:
+    yr =  f"{year % 10:1d}" if use_single_digit_year else f"{year % 100:02d}"
+    far_yr = f"{far_year % 100:02d}" if use_single_digit_year else f"{far_year % 10:1d}"
+    return f"{asset}{month_code(month)}{year % 100:02d}{month_code(far_month)}{far_yr} Comdty"
