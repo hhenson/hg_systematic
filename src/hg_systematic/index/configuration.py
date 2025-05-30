@@ -74,13 +74,13 @@ class MultiIndexConfiguration(BaseIndexConfiguration):
 
 
 @compute_node
-def initial_structure_from_config(config: TS[BaseIndexConfiguration]) -> TSB[IndexStructure]:
+def initial_structure_from_config(config: TS[IndexConfiguration]) -> TSB[IndexStructure]:
     """
     Prepare the initial structure from the index configuration.
     This will tick once only with the values extracted from the index configuration.
     """
     config.make_passive()
-    config: BaseIndexConfiguration = config.value
+    config: IndexConfiguration = config.value
     return {
         "current_position": {
             "units": {} if config.current_position is None else config.current_position,

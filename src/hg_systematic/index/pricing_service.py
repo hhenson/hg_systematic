@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from hgraph import subscription_service, TSS, TS, TSD, mesh_, graph, service_impl, dispatch_, dispatch, operator, \
     TimeSeriesSchema, TSB, default_path
 
-from hg_systematic.index.configuration import BaseIndexConfiguration
+from hg_systematic.index.configuration import BaseIndexConfiguration, IndexConfiguration
 from hg_systematic.index.configuration_service import index_configuration
 from hg_systematic.index.units import IndexStructure
 
@@ -55,7 +55,7 @@ def _price_index(symbol: TS[str]) -> TSB[IndexResult]:
 
 @dispatch(on=("config",))
 @operator
-def price_index_op(config: TS[BaseIndexConfiguration]) -> TSB[IndexResult]:
+def price_index_op(config: TS[IndexConfiguration]) -> TSB[IndexResult]:
     """
     Dispatches to the appropriate pricing implementation based on the configuration instance.
     To implement an index, implement the price_index_op operator.
