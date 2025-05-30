@@ -101,3 +101,8 @@ Version 0.0.31 (21-05-2025)
 ---------------------------
 
 * Update to support fixed weight multi-index
+
+Version 0.0.34 (30-05-2025)
+---------------------------
+
+* Update to add StubIndex logic to support indices that are not computed but instead loaded from a price source.
