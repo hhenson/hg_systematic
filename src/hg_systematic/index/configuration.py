@@ -4,13 +4,18 @@ from typing import Mapping
 
 from hgraph import CompoundScalar, compute_node, TS, TSB
 
-__all__ = ["IndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration", "initial_structure_from_config"]
+__all__ = ["BaseIndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration", "initial_structure_from_config"]
 
 from hg_systematic.index.units import IndexStructure
 
-
 @dataclass(frozen=True)
 class IndexConfiguration(CompoundScalar):
+    symbol: str
+    rounding: int = 8
+
+
+@dataclass(frozen=True)
+class BaseIndexConfiguration(IndexConfiguration):
     """
 
     publish_holiday_calendar: str
@@ -27,7 +32,6 @@ class IndexConfiguration(CompoundScalar):
     """
     symbol: str
     publish_holiday_calendar: str = None
-    rounding: int = 8
     initial_level: float = 100.0
     start_date: date = None
     current_position: Mapping[str, float] = None
@@ -38,7 +42,15 @@ class IndexConfiguration(CompoundScalar):
 
 
 @dataclass(frozen=True)
-class SingleAssetIndexConfiguration(IndexConfiguration):
+class StubIndexConfiguration(IndexConfiguration):
+    """
+    A stub index is one that has a price that can be retrieved using a generic price service.
+    This does not provide any initial conditions.
+    """
+
+
+@dataclass(frozen=True)
+class SingleAssetIndexConfiguration(BaseIndexConfiguration):
     """
     In order to set appropriate initial conditions, the position data is available to be set.
 
@@ -54,18 +66,18 @@ class SingleAssetIndexConfiguration(IndexConfiguration):
 
 
 @dataclass(frozen=True)
-class MultiIndexConfiguration(IndexConfiguration):
+class MultiIndexConfiguration(BaseIndexConfiguration):
     indices: tuple[str, ...] = None
 
 
 @compute_node
-def initial_structure_from_config(config: TS[IndexConfiguration]) -> TSB[IndexStructure]:
+def initial_structure_from_config(config: TS[BaseIndexConfiguration]) -> TSB[IndexStructure]:
     """
     Prepare the initial structure from the index configuration.
     This will tick once only with the values extracted from the index configuration.
     """
     config.make_passive()
-    config: IndexConfiguration = config.value
+    config: BaseIndexConfiguration = config.value
     return {
         "current_position": {
             "units": {} if config.current_position is None else config.current_position,

@@ -5,13 +5,13 @@ from hgraph import graph, TSB, TS, map_, reduce, dedup, or_, and_, len_, DebugCo
     sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TS_SCHEMA_1, feedback, lag, \
     contains_, round_
 
-from hg_systematic.index.configuration import IndexConfiguration, initial_structure_from_config
+from hg_systematic.index.configuration import BaseIndexConfiguration, initial_structure_from_config
 from hg_systematic.index.pricing_service import IndexResult
 from hg_systematic.index.units import IndexPosition, NotionalUnitValues, IndexStructure, NotionalUnits
 from hg_systematic.operators import MonthlyRollingInfo, monthly_rolling_info, monthly_rolling_weights, \
     MonthlyRollingWeightRequest, calendar_for
 
-ROLLING_CONFIG = TypeVar("ROLLING_CONFIG", bound=IndexConfiguration)
+ROLLING_CONFIG = TypeVar("ROLLING_CONFIG", bound=BaseIndexConfiguration)
 
 
 @graph

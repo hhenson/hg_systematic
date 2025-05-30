@@ -8,7 +8,7 @@ from hgraph import TimeSeriesSchema, TS, subscription_service, default_path, Com
 
 __all__ = ["MonthlyRollingRange", "monthly_rolling_weights", "MonthlyRollingRequest", "MonthlyRollingWeightRequest",
            "monthly_rolling_info", "MonthlyRollingInfo", "futures_rolling_contracts", "bbg_commodity_contract_fn",
-           "rolling_schedules"]
+           "rolling_schedules", "bbg_commodity_spread_contract_fn"]
 
 
 @dataclass(frozen=True)
