@@ -3,10 +3,13 @@ from datetime import date
 from typing import Mapping
 
 from hgraph import CompoundScalar, compute_node, TS, TSB
-
-__all__ = ["BaseIndexConfiguration", "SingleAssetIndexConfiguration", "MultiIndexConfiguration", "initial_structure_from_config"]
-
 from hg_systematic.index.units import IndexStructure
+
+
+__all__ = ["IndexConfiguration", "StubIndexConfiguration", "BaseIndexConfiguration", "SingleAssetIndexConfiguration",
+           "MultiIndexConfiguration", "initial_structure_from_config"]
+
+
 
 @dataclass(frozen=True)
 class IndexConfiguration(CompoundScalar):

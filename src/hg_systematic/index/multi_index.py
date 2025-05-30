@@ -8,6 +8,12 @@ from hg_systematic.index.index_utils import DebugContext, monthly_rolling_index
 from hg_systematic.index.pricing_service import IndexResult, INDEX_MESH, price_index_op
 from hg_systematic.index.units import NotionalUnitValues
 
+__all__ = [
+    "price_monthly_multi_index", "multi_index_monthly_rolling_index", "get_sub_levels", "set_multi_index_debug_on",
+    "MonthlyRollingMultiIndexConfiguration", "MonthlyRollingMultiIndexFixedWeightConfiguration",
+    "AnnualMultiIndexConfiguration", "ROLLING_MULTI_CONFIG", "compute_target_units_multi_index"
+]
+
 DEBUG_ON = False
 
 
