@@ -8,6 +8,8 @@ from hgraph import graph, register_service, default_path, TSB, DebugContext
 
 from hg_systematic.impl import trade_date_week_days, calendar_for_static, create_market_holidays, \
     price_in_dollars_static_impl, monthly_rolling_info_service_impl, monthly_rolling_weights_impl, business_day_impl
+from hg_systematic.index.configuration_service import static_index_configuration
+from hg_systematic.index.pricing_service import price_index_impl
 
 from hg_systematic.index.single_asset_index import MonthlySingleAssetIndexConfiguration, \
     price_monthly_single_asset_index
@@ -49,6 +51,8 @@ def test_single_asset_index():
     @graph
     def g() -> TSB[IndexResult]:
         register_services()
+        register_service(default_path, static_index_configuration, indices=frozendict())
+        register_service(default_path, price_index_impl)
         with DebugContext("[Test]"):
             return price_monthly_single_asset_index(
                 config=MonthlySingleAssetIndexConfiguration(
@@ -80,3 +84,40 @@ def test_single_asset_index():
     print('Result', result)
     assert result
 
+
+def test_single_asset_index_initialised_from_nothing():
+    from hg_systematic.index.pricing_service import IndexResult, price_index_op
+
+    @graph
+    def g() -> TSB[IndexResult]:
+        register_services()
+        register_service(default_path, static_index_configuration, indices=frozendict())
+        register_service(default_path, price_index_impl)
+        with DebugContext("[Test]"):
+            return price_monthly_single_asset_index(
+                config=MonthlySingleAssetIndexConfiguration(
+                    symbol="CL Index",
+                    publish_holiday_calendar="BCOM",
+                    rounding=8,
+                    initial_level=100.0,
+                    initial_contract='CLK19 Comdty',
+                    start_date=date(2019, 4, 1),
+                    asset="CL",
+                    roll_period=(5, 10),
+                    roll_schedule=("H0", "H0", "K0", "K0", "N0", "N0", "U0", "U0", "X0", "X0", "F0", "F1"),
+                    trading_halt_calendar="CL NonTrading",
+                    contract_fn=bbg_commodity_contract_fn
+                ))
+
+    EvaluationTrace.set_print_all_values(True)
+    EvaluationTrace.set_use_logger(False)
+
+    result = eval_node(
+        g,
+        __start_time__=datetime(2019, 4, 1),
+        __end_time__=datetime(2019, 6, 1),
+        __elide__=True,
+        #__trace__=True
+    )
+    print('Result', result)
+    assert result
