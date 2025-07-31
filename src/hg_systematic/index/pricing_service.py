@@ -66,7 +66,7 @@ def _price_index(symbol: TS[str]) -> TSB[IndexResult]:
     # Ensure we only start trying to compute the index once the start date
     # is achieved or past.
     dt = trade_date()  # We expect the set of trade dates to be larger than the set of publishing dates.
-    config = gate(dt < config.start_date, config, -1)
+    config = gate(dt >= config.start_date, config, -1)
     return price_index_op(config)
 
 
