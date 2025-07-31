@@ -4,7 +4,7 @@ from typing import Mapping
 
 from frozendict import frozendict as fd
 from hgraph import CompoundScalar, compute_node, TS, TSB, graph, switch_, dispatch, const, convert, TSD, \
-    map_, combine, TSS, reduce, add_, take, nothing
+    map_, combine, TSS, reduce, add_, take, nothing, dedup
 
 from hg_systematic.index.units import IndexStructure
 
@@ -81,7 +81,7 @@ def initial_structure_from_config(config: TS[IndexConfiguration]) -> TSB[IndexSt
     td = trade_date()
     dt = take(td, 1)
     # This should only compute something on day one. After that it should no longer do anything.
-    return switch_(
+    out = switch_(
         dt == td,
         {
             True: lambda dt_, config_: switch_(
@@ -97,6 +97,8 @@ def initial_structure_from_config(config: TS[IndexConfiguration]) -> TSB[IndexSt
         dt,
         config,
     )
+    # Ensure we have a stable result when we switch to the nothing branch for consumers of the data.
+    return dedup(out)
 
 
 _DEFAULT_VALUE = fd({
