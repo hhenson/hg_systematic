@@ -1,3 +1,4 @@
+from datetime import date
 from typing import TypeVar, Callable
 
 from frozendict import frozendict
@@ -60,11 +61,11 @@ def monthly_rolling_index(
     else:
         roll_info, roll_weight = get_monthly_rolling_values(config)
 
-    # If a custom halt_trading signal is provide, use it, alternatively if the config has a trading_halt_calendar
-    # use that to feed into a simple contains filter, finally if no other strategy is provided assume no halt signal
+    # If a custom halt_trading signal is provided, use it, alternatively if the config has a trading_halt_calendar
+    # use that to feed into a simple ``contains`` filter. Finally, if no other strategy is provided, assume no halt signal
     # and wire in False.
     halt_trading = kwargs.halt_trading if "halt_trading" in kwargs_schema else \
-        dedup(contains_(calendar_for(config.trading_halt_calendar), roll_info.dt)) if "trading_halt_calendar" in cfg_schema else \
+        _halt_with_calendar(config, roll_info.dt) if "trading_halt_calendar" in cfg_schema else \
                   const(False)
     DebugContext.print("halt_trading", halt_trading)
 
@@ -98,6 +99,15 @@ def monthly_rolling_index(
     result = out.copy_with(level=round_(out.level, config.rounding))
     DebugContext.print("published level", result.level)
     return result
+
+
+@graph
+def _halt_with_calendar(config: TS[ROLLING_CONFIG], dt: TS[date]) -> TS[bool]:
+    """
+    For now add a default of False, this protects against no calendar being present. Will only affect the rebalance
+    logic in any significant way if the calendar is missing, but without it the index does not price correctly at all.
+    """
+    return dedup(default(contains_(calendar_for(config.trading_halt_calendar), dt), False))
 
 
 @graph
