@@ -1,4 +1,5 @@
 from hgraph import graph, TS
+import math
 from hgraph.test import eval_node
 
 from hg_systematic.analytics._streaming import slope_of
@@ -158,3 +159,31 @@ def test_slope_of_degenerate_window_one():
     out = eval_node(_slope_graph_w1, values)
     out = [v for v in out if v is not None]
     assert out == [0.0]
+
+
+# ---- Time-based (no window) tests ----
+
+@graph
+def _slope_graph_time(x: TS[float]) -> TS[float]:
+    # Time-sensitive expanding window version
+    return slope_of(x, fixed_interval=False, window=None)
+
+
+def test_time_slope_increasing_sequence_emits_non_zero():
+    # For an increasing sequence, the time-based slope should eventually emit a non-zero finite value
+    values = [float(i) for i in range(12)]
+    out_time = [v for v in eval_node(_slope_graph_time, values) if v is not None]
+    assert len(out_time) >= 1
+    assert out_time[0] == 0.0
+    # At least one subsequent emission is non-zero
+    assert any(abs(v) > 0.0 for v in out_time[1:])
+    # And all emitted slopes are finite numbers
+    for v in out_time[1:]:
+        assert math.isfinite(v)
+
+
+def test_time_slope_constant_sequence_zero():
+    # For a constant sequence the slope should remain 0.0 and emit once
+    values = [5.0, 5.0, 5.0, 5.0, 5.0]
+    out_time = [v for v in eval_node(_slope_graph_time, values) if v is not None]
+    assert out_time == [0.0]

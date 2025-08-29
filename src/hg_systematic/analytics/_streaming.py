@@ -36,6 +36,14 @@ class _RollingSlopeState(CompoundScalar):
     buf: object = None
 
 
+class _TimeSlopeState(CompoundScalar):
+    n: int = 0
+    sum_x: float = 0.0
+    sum_y: float = 0.0
+    sum_xx: float = 0.0
+    sum_xy: float = 0.0
+
+
 @compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is True and s.get("window") is None)
 def slope_of_fixed_interval_no_window(
     ts: TS[float],
@@ -132,6 +140,48 @@ def slope_of_fixed_interval_fixed_window(
         var_x = n * (n * n - 1) / 12.0
         cov_xy = sum_iy - (sum_i * sum_y) / n
         slope = cov_xy / var_x if var_x != 0.0 else 0.0
+    else:
+        slope = 0.0
+
+    if not _output.valid or _output.value != slope:
+        return slope
+
+
+@compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is False and s.get("window") is None)
+def slope_of_time_no_window(
+    ts: TS[float],
+    fixed_interval: bool = False,
+    window: object = None,
+    _state: STATE[_TimeSlopeState] = None,
+    _output: TS[float] = None,
+) -> TS[float]:
+    """
+    Incrementally compute slope for time-sensitive samples with an expanding window.
+
+    Uses ts.last_modified_time as x (converted to seconds since epoch) and performs
+    an online linear regression maintaining sufficient statistics:
+      - n, sum_x, sum_y, sum_xx, sum_xy
+    Slope formula (for n >= 2):
+      slope = (n*sum_xy - sum_x*sum_y) / (n*sum_xx - sum_x*sum_x)
+    Emits 0.0 when insufficient points or zero variance in time.
+    """
+    # last_modified_time is a datetime.datetime; convert to POSIX seconds
+    t = ts.last_modified_time
+    x: float = float(t.timestamp())
+
+    y = ts.value
+
+    _state.n += 1
+    _state.sum_x += x
+    _state.sum_y += y
+    _state.sum_xx += x * x
+    _state.sum_xy += x * y
+
+    n = _state.n
+    if n >= 2:
+        num = n * _state.sum_xy - _state.sum_x * _state.sum_y
+        den = n * _state.sum_xx - _state.sum_x * _state.sum_x
+        slope = num / den if den != 0.0 else 0.0
     else:
         slope = 0.0
 
