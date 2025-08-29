@@ -20,10 +20,6 @@ def slope_of(
         A fixed window of an expanding window, defaults to None, or otherwise
         an expanding window.
     """
-    
-
-
-
 
 
 class _SlopeState(CompoundScalar):
@@ -33,7 +29,7 @@ class _SlopeState(CompoundScalar):
 
 
 @compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is True and s.get("window") is None)
-def _slope_of_fixed_interval_no_window(
+def slope_of_fixed_interval_no_window(
     ts: TS[float],
     fixed_interval: bool = True,
     window: INT_OR_TIME_DELTA = None,
