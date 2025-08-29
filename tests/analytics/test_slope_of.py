@@ -66,3 +66,95 @@ def test_slope_of_general_sequence():
     assert len(out) == len(expected)
     for got, exp in zip(out, expected):
         assert abs(got - exp) < 1e-12
+
+
+@graph
+def _slope_graph_w3(x: TS[float]) -> TS[float]:
+    # Fixed-size rolling window of 3 points
+    return slope_of(x, fixed_interval=True, window=3)
+
+
+@graph
+def _slope_graph_w5(x: TS[float]) -> TS[float]:
+    # Fixed-size rolling window of 5 points
+    return slope_of(x, fixed_interval=True, window=5)
+
+
+@graph
+def _slope_graph_w1(x: TS[float]) -> TS[float]:
+    # Degenerate rolling window of 1 point
+    return slope_of(x, fixed_interval=True, window=1)
+
+
+def _expected_slopes_emitted_rolling(values: list[float], w: int) -> list[float]:
+    """
+    Compute expected emitted slopes for a fixed-size rolling window over equally spaced samples.
+    Emission rule mirrors operator: emit at first tick (0.0) and whenever slope value changes.
+    """
+    emitted: list[float] = []
+    last: float | None = None
+    window_vals: list[float] = []
+
+    for y in values:
+        # push new value and trim to window size
+        window_vals.append(y)
+        if len(window_vals) > w:
+            window_vals.pop(0)
+
+        n = len(window_vals)
+        if n >= 2:
+            # indices 0..n-1 within the window
+            sum_y = 0.0
+            sum_iy = 0.0
+            for i, vy in enumerate(window_vals):
+                sum_y += vy
+                sum_iy += i * vy
+            sum_i = n * (n - 1) / 2.0
+            var_x = n * (n * n - 1) / 12.0
+            cov_xy = sum_iy - (sum_i * sum_y) / n
+            slope = 0.0 if var_x == 0.0 else cov_xy / var_x
+        else:
+            slope = 0.0
+
+        if last is None or slope != last:
+            emitted.append(slope)
+            last = slope
+
+    return emitted
+
+
+def test_slope_of_linear_sequence_fixed_window():
+    # y = a*x + b; within any fixed-size window slope remains 'a' once there are 2+ points
+    a = 1.7
+    b = 0.3
+    values = [a * i + b for i in range(20)]
+
+    out = eval_node(_slope_graph_w5, values)
+    out = [v for v in out if v is not None]
+
+    # Allow small floating drift in rolling updates; ensure first emission is 0.0 and subsequent are ~a
+    assert len(out) >= 2
+    assert out[0] == 0.0
+    for v in out[1:]:
+        assert abs(v - a) < 1e-12
+
+
+def test_slope_of_general_sequence_fixed_window():
+    # Non-linear sequence; rolling window of 3 should update slope as local window changes
+    values = [0.0, 1.0, 4.0, 9.0, 16.0, 25.0]  # y = x^2
+
+    expected = _expected_slopes_emitted_rolling(values, 3)
+    out = eval_node(_slope_graph_w3, values)
+
+    out = [v for v in out if v is not None]
+    assert len(out) == len(expected)
+    for got, exp in zip(out, expected):
+        assert abs(got - exp) < 1e-12
+
+
+def test_slope_of_degenerate_window_one():
+    # With window=1 there are never 2 points in the window; slope should remain 0.0 and emit once
+    values = [5.0, -2.0, 3.5, 7.1, 8.2]
+    out = eval_node(_slope_graph_w1, values)
+    out = [v for v in out if v is not None]
+    assert out == [0.0]
