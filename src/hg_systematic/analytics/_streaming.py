@@ -32,7 +32,7 @@ class _SlopeState(CompoundScalar):
 def slope_of_fixed_interval_no_window(
     ts: TS[float],
     fixed_interval: bool = True,
-    window: INT_OR_TIME_DELTA = None,
+    window: object = None,
     _state: STATE[_SlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:

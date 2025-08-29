@@ -1,3 +1,3 @@
-from ._streaming import StreamingLinearRegression
+from ._streaming import slope_of
 
-__all__ = ["StreamingLinearRegression"]
+__all__ = ["slope_of"]
