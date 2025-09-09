@@ -4,7 +4,7 @@ from typing import Mapping
 
 from frozendict import frozendict as fd
 from hgraph import CompoundScalar, compute_node, TS, TSB, graph, switch_, dispatch, const, convert, TSD, \
-    map_, combine, TSS, reduce, add_, take, nothing, dedup
+    map_, combine, TSS, reduce, add_, take, nothing, dedup, div_, DivideByZero
 
 from hg_systematic.index.units import IndexStructure
 
@@ -140,7 +140,7 @@ def compute_initial_structure_from_single_asset(config: TS[SingleAssetIndexConfi
     # TODO: Should provide a version which is just price or price in native currency, ...
     unit_values = map_(lambda key: price_in_dollars(key), __keys__=asset)
     total_value = reduce(add_, unit_values, 0.0)
-    units = map_(lambda r: r, initial_level / total_value, __keys__=asset)
+    units = map_(lambda r: r, div_(initial_level, total_value, DivideByZero.NONE), __keys__=asset)
     # Wait until we have all prices before ticking out the data as a single tick.
     return combine[TSB[IndexStructure]](
         current_position=combine(
