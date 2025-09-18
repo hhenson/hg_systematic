@@ -106,3 +106,8 @@ Version 0.0.34 (30-05-2025)
 ---------------------------
 
 * Update to add StubIndex logic to support indices that are not computed but instead loaded from a price source.
+
+Version 0.0.39 (18-09-2025)
+---------------------------
+
+* Add scenario and recordable support
