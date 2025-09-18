@@ -19,7 +19,7 @@ _ACTIVE_PARAMETERS = {}
 def scenarios_to_evaluate(*labels: str | Callable):
     """Sets the active scenarios for the next evaluation."""
     global _ACTIVE_SCENARIOS
-    _ACTIVE_SCENARIOS.update(labels)
+    _ACTIVE_SCENARIOS.update(l if isinstance(l, str) else l.signature.name for l in labels)
 
 
 def reset_scenarios():
@@ -29,17 +29,17 @@ def reset_scenarios():
     _ACTIVE_PARAMETERS = {}
 
 
-def is_scenario_active(label: str) -> bool:
+def is_scenario_active(label: str) -> bool | str:
     """Returns true if the scenario is active."""
     global _ACTIVE_SCENARIOS
-    return label in _ACTIVE_SCENARIOS
+    return label in _ACTIVE_SCENARIOS or f"{label} not active"
 
 
 def use_default_scenario(overloads: Callable) -> bool:
     """Indicates if the default scenario should be used."""
     global _SCENARIOS, _ACTIVE_SCENARIOS
     keys = set(_SCENARIOS[overloads].keys())
-    return len(keys.intersection(_ACTIVE_SCENARIOS)) == 0
+    return len(k := keys.intersection(_ACTIVE_SCENARIOS)) == 0 or f"{k} active so default should not be used"
 
 
 def register_scenario(label: str, overloads: Callable = None, parameters: Sequence[str] = None):
@@ -96,7 +96,6 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
     kw_inputs = {k: v for k, v in fn.signature.kw_only_inputs.items() if k in non_auto_resolve}
     defaults = {k: v for k, v in fn.signature.defaults.items() if k in non_auto_resolve and v is not None}
 
-    @graph(overloads=overloads, requires=lambda m, s, l=label: is_scenario_active(l))
     @with_signature(
         args=pos_inputs,
         kwargs=kw_inputs,
@@ -108,6 +107,10 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
         kwargs.update(parameters)
         return fn(*args, **kwargs)
 
+    wrapper.__name__ = signature.name
+    wrapper.__doc__ = fn.fn.__doc__
+    wrapper = graph(wrapper, overloads=overloads, requires=lambda m, s, l=label: is_scenario_active(l))
+
     register_scenario(label, overloads, parameters)
 
     return wrapper
@@ -118,7 +121,7 @@ def default_scenario(fn=None, *, overloads: Callable = None):
     :param overloads: The generic operator this default scenario is implementing.
     """
     if fn is None:
-        return lambda fn: scenario(fn, overloads=overloads)
+        return lambda fn: default_scenario(fn, overloads=overloads)
 
     if not isinstance(fn, WiringNodeClass):
         # The fn is not a graph or node instance so wrap it in a graph.
