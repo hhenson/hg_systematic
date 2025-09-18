@@ -1,0 +1,144 @@
+"""
+Scenarios allow for parameterised testing of strategies, where an operator can be defined to describe a step or element
+of a strategy, but where different approaches can be taken to achieve the objective. This allow for creating different
+runs / scenarios to be evaluated, without loosing the overall shape of the strategy.
+"""
+from typing import Callable, Sequence
+
+__all__ = ["scenario", "scenarios_to_evaluate", "reset_scenarios", "is_scenario_active", "use_default_scenario",
+           "register_scenario", "set_parameters", "get_active_parameters", "default_scenario",]
+
+from hgraph import WiringNodeClass, graph, with_signature
+
+_SCENARIOS = {}
+_LBL_TO_OVERLOAD = {}
+_ACTIVE_SCENARIOS = set()
+_ACTIVE_PARAMETERS = {}
+
+
+def scenarios_to_evaluate(*labels: str | Callable):
+    """Sets the active scenarios for the next evaluation."""
+    global _ACTIVE_SCENARIOS
+    _ACTIVE_SCENARIOS.update(labels)
+
+
+def reset_scenarios():
+    """Resets the active scenarios."""
+    global _ACTIVE_SCENARIOS, _ACTIVE_PARAMETERS
+    _ACTIVE_SCENARIOS = set()
+    _ACTIVE_PARAMETERS = {}
+
+
+def is_scenario_active(label: str) -> bool:
+    """Returns true if the scenario is active."""
+    global _ACTIVE_SCENARIOS
+    return label in _ACTIVE_SCENARIOS
+
+
+def use_default_scenario(overloads: Callable) -> bool:
+    """Indicates if the default scenario should be used."""
+    global _SCENARIOS, _ACTIVE_SCENARIOS
+    keys = set(_SCENARIOS[overloads].keys())
+    return len(keys.intersection(_ACTIVE_SCENARIOS)) == 0
+
+
+def register_scenario(label: str, overloads: Callable = None, parameters: Sequence[str] = None):
+    """Registers a scenario."""
+    global _SCENARIOS, _LBL_TO_OVERLOAD
+    if label in _LBL_TO_OVERLOAD:
+        raise ValueError(f"Scenario label {label} already registered.")
+    _LBL_TO_OVERLOAD[label] = overloads
+    _SCENARIOS.setdefault(overloads, {})[label] = parameters or []
+
+
+def set_parameters(label: str, **kwargs):
+    """Sets the parameters for a scenario."""
+    global _ACTIVE_PARAMETERS, _LBL_TO_OVERLOAD, _SCENARIOS
+    parmeters = _SCENARIOS[_LBL_TO_OVERLOAD[label]][label]
+    if len(parmeters) != len(kwargs) or set(kwargs.keys()) - set(parmeters):
+        # We must set parameters defined for the scenario only, but we can miss some out (this assumes there is a default)
+        raise ValueError(f"Expected {parmeters} parameters, got {kwargs.keys()}.")
+    _ACTIVE_PARAMETERS[label] = kwargs
+
+
+def get_active_parameters(label: str):
+    """Gets the parameters for a scenario."""
+    global _ACTIVE_PARAMETERS
+    return _ACTIVE_PARAMETERS.get(label, {})
+
+
+def scenario(fn=None, *, label: str = None, overloads: Callable = None, parameters: Sequence[str] = None):
+    """
+    Wraps a graph (or node) with a scenario label and associates the wrapped function with the overload provided.
+
+    When the label is set as a run-time scenario, then the scenario will be used as the implementation of the overload.
+    This uses the standard hgraph.operator logic. Thus, the rules for the operator decorator apply.
+
+    Use the use_scenarios function to set this scenario as the scenario to evaluate.
+
+    :param label: The label of the scenario, if not provided, the function name is used.
+    :param overloads: The generic operator this scenario is implementing.
+    :param parameters: Any parameters that are configurable for this scenario.
+    """
+    if fn is None:
+        return lambda fn: scenario(fn, label=label, overloads=overloads, parameters=parameters)
+
+    if not isinstance(fn, WiringNodeClass):
+        # The fn is not a graph or node instance so wrap it in a graph.
+        fn = graph(fn)
+
+    signature = fn.signature
+    if label is None:
+        label = signature.name
+
+    non_auto_resolve = fn.signature.non_autoresolve_inputs
+    pos_inputs = {k: v for k, v in fn.signature.positional_inputs.items() if k in non_auto_resolve}
+    kw_inputs = {k: v for k, v in fn.signature.kw_only_inputs.items() if k in non_auto_resolve}
+    defaults = {k: v for k, v in fn.signature.defaults.items() if k in non_auto_resolve and v is not None}
+
+    @graph(overloads=overloads, requires=lambda m, s, l=label: is_scenario_active(l))
+    @with_signature(
+        args=pos_inputs,
+        kwargs=kw_inputs,
+        defaults=defaults,
+        return_annotation=fn.signature.output_type
+    )
+    def wrapper(*args, **kwargs):
+        parameters = get_active_parameters(label)
+        kwargs.update(parameters)
+        return fn(*args, **kwargs)
+
+    register_scenario(label, overloads, parameters)
+
+    return wrapper
+
+def default_scenario(fn=None, *, overloads: Callable = None):
+    """
+    What to do if no scenario is set.
+    :param overloads: The generic operator this default scenario is implementing.
+    """
+    if fn is None:
+        return lambda fn: scenario(fn, overloads=overloads)
+
+    if not isinstance(fn, WiringNodeClass):
+        # The fn is not a graph or node instance so wrap it in a graph.
+        fn = graph(fn)
+
+    signature = fn.signature
+
+    non_auto_resolve = signature.non_autoresolve_inputs
+    pos_inputs = {k: v for k, v in signature.positional_inputs.items() if k in non_auto_resolve}
+    kw_inputs = {k: v for k, v in signature.kw_only_inputs.items() if k in non_auto_resolve}
+    defaults = {k: v for k, v in signature.defaults.items() if k in non_auto_resolve and v is not None}
+
+    @graph(overloads=overloads, requires=lambda m, s, o=overloads: use_default_scenario(o))
+    @with_signature(
+        args=pos_inputs,
+        kwargs=kw_inputs,
+        defaults=defaults,
+        return_annotation=signature.output_type
+    )
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
