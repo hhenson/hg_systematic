@@ -151,7 +151,7 @@ def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str =
     if no_label := label is None:
         label = signature.name
     if category is None and "_" in signature.name:
-        category, lbl = signature.name.rsplit("_", 1)
+        lbl, category = signature.name.rsplit("_", 1)
         if no_label:
             label = lbl
 
@@ -163,7 +163,6 @@ def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str =
     kw_inputs = {k: v for k, v in signature.kw_only_inputs.items() if k in non_auto_resolve}
     defaults = {k: v for k, v in signature.defaults.items() if k in non_auto_resolve and v is not None}
 
-    @graph(overloads=overloads)
     @with_signature(
         args=pos_inputs,
         kwargs=kw_inputs,
@@ -181,16 +180,20 @@ def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str =
                     raise ValueError(f"Cannot record output type {tp} for {fn} as it is not resolved.")
             else:
                 tp = signature.output_type
-            if DebugContext.instance().debug:
+            if DebugContext.instance() and DebugContext.instance().debug:
                 print(f"Replaying {recordable_id}.{label} with type: {tp}")
             # Replay the data, this will cause the fn to be wired out of the graph (and any nodes solely dependent on it
-            return get_replay_function()(key=label, tp=tp, recordable_id=recordable_id)
+            return get_replay_function()(key=label, tp=tp.py_type, recordable_id=recordable_id)
         else:
             out = fn(*args, **kwargs)
             if is_recording(label, category):
-                if DebugContext.instance().debug:
+                if DebugContext.instance() and DebugContext.instance().debug:
                     print(f"Recording {recordable_id}.{label} with type: {out.output_type}")
                 get_record_function()(out, key=label, recordable_id=recordable_id)
             return out
+
+    wrapper.__name__ = signature.name
+    wrapper.__doc__ = fn.fn.__doc__
+    wrapper = graph(wrapper, overloads=overloads)
 
     return wrapper
