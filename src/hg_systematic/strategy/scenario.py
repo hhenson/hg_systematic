@@ -38,7 +38,7 @@ def is_scenario_active(label: str) -> bool | str:
 def use_default_scenario(overloads: Callable) -> bool:
     """Indicates if the default scenario should be used."""
     global _SCENARIOS, _ACTIVE_SCENARIOS
-    keys = set(_SCENARIOS[overloads].keys())
+    keys = set(_SCENARIOS.get(overloads, {}).keys())
     return len(k := keys.intersection(_ACTIVE_SCENARIOS)) == 0 or f"{k} active so default should not be used"
 
 
