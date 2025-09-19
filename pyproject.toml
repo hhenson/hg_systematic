@@ -1,6 +1,6 @@
 [project]
 name = "hg_systematic"
-version = "0.0.40"
+version = "0.0.41"
 description = "A library and examples to show how HGraph can be used for systematic trading."
 readme = "README.md"
 license = {text = "MIT"}
