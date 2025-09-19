@@ -140,7 +140,6 @@ def default_scenario(fn=None, *, overloads: Callable = None):
     kw_inputs = {k: v for k, v in signature.kw_only_inputs.items() if k in non_auto_resolve}
     defaults = {k: v for k, v in signature.defaults.items() if k in non_auto_resolve and v is not None}
 
-    @graph(overloads=overloads, requires=lambda m, s, o=overloads: use_default_scenario(o))
     @with_signature(
         args=pos_inputs,
         kwargs=kw_inputs,
@@ -149,5 +148,9 @@ def default_scenario(fn=None, *, overloads: Callable = None):
     )
     def wrapper(*args, **kwargs):
         return fn(*args, **kwargs)
+
+    wrapper.__name__ = signature.name
+    wrapper.__doc__ = fn.fn.__doc__
+    wrapper = graph(wrapper, overloads=overloads, requires=lambda m, s, o=overloads: use_default_scenario(o))
 
     return wrapper
