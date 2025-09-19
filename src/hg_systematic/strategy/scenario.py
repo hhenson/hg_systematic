@@ -1,7 +1,7 @@
 """
 Scenarios allow for parameterised testing of strategies, where an operator can be defined to describe a step or element
-of a strategy, but where different approaches can be taken to achieve the objective. This allow for creating different
-runs / scenarios to be evaluated, without loosing the overall shape of the strategy.
+of a strategy, but where different approaches can be taken to achieve the objective. This allows for creating different
+runs / scenarios to be evaluated without losing the overall shape of the strategy.
 """
 from typing import Callable, Sequence
 
@@ -45,19 +45,25 @@ def use_default_scenario(overloads: Callable) -> bool:
 def register_scenario(label: str, overloads: Callable = None, parameters: Sequence[str] = None):
     """Registers a scenario."""
     global _SCENARIOS, _LBL_TO_OVERLOAD
-    if label in _LBL_TO_OVERLOAD:
-        raise ValueError(f"Scenario label {label} already registered.")
-    _LBL_TO_OVERLOAD[label] = overloads
+    if label in _LBL_TO_OVERLOAD and overloads in _LBL_TO_OVERLOAD[label]:
+        raise ValueError(f"Scenario label {label} already registered for overload: {overloads.signature.signature}.")
+    _LBL_TO_OVERLOAD.setdefault(label, set()).add(overloads)
     _SCENARIOS.setdefault(overloads, {})[label] = parameters or []
 
 
-def set_parameters(label: str, **kwargs):
+def set_parameters(label: str | Callable, **kwargs):
     """Sets the parameters for a scenario."""
     global _ACTIVE_PARAMETERS, _LBL_TO_OVERLOAD, _SCENARIOS
-    parmeters = _SCENARIOS[_LBL_TO_OVERLOAD[label]][label]
-    if len(parmeters) != len(kwargs) or set(kwargs.keys()) - set(parmeters):
+    if not isinstance(label, str):
+        label = label.signature.name
+    overloads = _LBL_TO_OVERLOAD[label]
+    if len(overloads) != 1:
+        raise ValueError(f"Expected 1 overload for scenario {label}, got {len(overloads)}.")
+    overload = next(iter(overloads))
+    parameters = _SCENARIOS[overload][label]
+    if len(parameters) != len(kwargs) or set(kwargs.keys()) - set(parameters):
         # We must set parameters defined for the scenario only, but we can miss some out (this assumes there is a default)
-        raise ValueError(f"Expected {parmeters} parameters, got {kwargs.keys()}.")
+        raise ValueError(f"Expected {parameters} parameters, got {kwargs.keys()}.")
     _ACTIVE_PARAMETERS[label] = kwargs
 
 
