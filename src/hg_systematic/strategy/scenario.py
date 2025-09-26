@@ -73,6 +73,18 @@ def get_active_parameters(label: str):
     return _ACTIVE_PARAMETERS.get(label, {})
 
 
+def get_all_active_parameters():
+    """The current active parameters."""
+    global _ACTIVE_PARAMETERS
+    return _ACTIVE_PARAMETERS
+
+
+def get_active_scenarios():
+    """The active scenarios."""
+    global _ACTIVE_SCENARIOS
+    return _ACTIVE_SCENARIOS
+
+
 def scenario(fn=None, *, label: str = None, overloads: Callable = None, parameters: Sequence[str] = None):
     """
     Wraps a graph (or node) with a scenario label and associates the wrapped function with the overload provided.
