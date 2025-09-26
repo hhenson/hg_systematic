@@ -57,8 +57,9 @@ def set_parameters(label: str | Callable, **kwargs):
     if not isinstance(label, str):
         label = label.signature.name
     overloads = _LBL_TO_OVERLOAD[label]
-    if len(overloads) != 1:
-        raise ValueError(f"Expected 1 overload for scenario {label}, got {len(overloads)}.")
+    assert len(overloads) >= 1, f"Expected at least 1 overload for scenario label {label}"
+    # All overloads using the same scenario label must use the same parameters,
+    # so just pick one and run with it
     overload = next(iter(overloads))
     parameters = _SCENARIOS[overload][label]
     if len(parameters) != len(kwargs) or set(kwargs.keys()) - set(parameters):
