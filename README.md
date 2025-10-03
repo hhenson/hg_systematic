@@ -8,47 +8,41 @@ See [this](https://hgraph.readthedocs.io/en/latest/) for more information.
 
 ## Development
 
-The project is currently configured to make use of [Poetry](https://python-poetry.org) for dependency management. 
-Take a look at the website to see how best to install the tool.
+This project uses uv for environment and dependency management.
+See https://docs.astral.sh/uv/ for installation instructions.
 
 Here are some useful commands:
 
-First, this will cause the virtual environment to be installed in the same folder as the project (in .venv folder)
+Create a local virtual environment in the project directory (./.venv) with Python 3.12:
 
 ```bash
-poetry config virtualenvs.in-project true
+uv venv --python 3.12
 ```
 
-Use this command to set the version of Python to make use of if you want a specific version of Python.
+Install the project and its dependencies:
 
 ```bash
-poetry env use 3.12
+# Base dependencies
+uv sync
+
+# Include documentation dependencies
+uv sync --extra docs
+
+# Install all optional extras (e.g. tests, adaptors)
+uv sync --all-extras --all-groups
 ```
 
-Then use the following command to install the project and its dependencies. Note that the ``--with docs`` installs
-the dependencies to build the documentation set which is not required otherwise, also the ``--all-extras`` is only
-required for the adaptors.
-
-```bash
-poetry install --with docs --all-extras
-```
-
-If you did not use the first command, you can find the location of the installation using:
-
-```bash
-poetry env info
-```
-
-PyCharm can make use of poetry to ``setup`` the project.
+PyCharm can use the interpreter from ./.venv (created by uv) to set up the project.
+Recent versions of PyCharm support uv, use the "uv" interpreter type.
 
 ### Run Tests
 
 ```bash
 # No Coverage
-poetry run pytest
+uv run pytest
 ```
 
 ```bash
 # Generate Coverage Report
-poetry run pytest --cov=your_package_name --cov-report=xml
+uv run pytest --cov=hg_systematic --cov-report=xml
 ```
