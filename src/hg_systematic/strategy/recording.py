@@ -6,9 +6,10 @@ __all__ = ["recordable", "set_recording_prefix", "set_record_replay_state", "REC
            "PASS_THROUGH", "reset_record_replay_state", "is_replayable", "is_recording", "set_record_function",
            "set_replay_function", ]
 
-from typing import Callable, Any, TypeVar
+from typing import Callable, Any, TypeVar, Sequence
 
 from hgraph import OUT, WiringNodeClass, graph, with_signature, DebugContext, replay, record
+from hgraph.adaptors.data_frame import set_data_frame_overrides
 
 GRAPH_SIGNATURE = TypeVar("GRAPH_SIGNATURE", bound=Callable[..., OUT | None])
 
@@ -27,6 +28,7 @@ PASS_THROUGH = None
 
 _RECORD_REPLAY_STATE = None
 
+
 def set_record_replay_state(label: str = None, category: str = None, state: bool = None):
     """
     Sets the record / replay / ignore state for a given label and category.
@@ -37,7 +39,7 @@ def set_record_replay_state(label: str = None, category: str = None, state: bool
     """
     global _RECORD_REPLAY_STATE
     if _RECORD_REPLAY_STATE is None:
-        _RECORD_REPLAY_STATE = {"default": None, "labels": {}, "categories":{}, "pairs":{}}
+        _RECORD_REPLAY_STATE = {"default": None, "labels": {}, "categories": {}, "pairs": {}}
     if label is None:
         if category is None:
             _RECORD_REPLAY_STATE["default"] = state
@@ -49,10 +51,12 @@ def set_record_replay_state(label: str = None, category: str = None, state: bool
         else:
             _RECORD_REPLAY_STATE["pairs"][f"{label}:{category}"] = state
 
+
 def reset_record_replay_state():
     """Resets the record / replay / ignore state."""
     global _RECORD_REPLAY_STATE
     _RECORD_REPLAY_STATE = None
+
 
 def _state_of_record_replay(label: str, category: str) -> bool | None:
     """Returns the state of the record / replay / ignore state for a given label and category."""
@@ -68,10 +72,12 @@ def _state_of_record_replay(label: str, category: str) -> bool | None:
     else:
         return _RECORD_REPLAY_STATE["default"]
 
+
 def is_replayable(label: str, category: str) -> bool:
     """True if this label and category is replayable."""
     state = _state_of_record_replay(label, category)
     return state is REPLAYING_ON
+
 
 def is_recording(label: str, category: str) -> bool:
     """True if this label and category is to be recorded."""
@@ -81,6 +87,7 @@ def is_recording(label: str, category: str) -> bool:
 
 _RECORD_FUNCTION = None
 _REPLAY_FUNCTION = None
+
 
 def set_record_function(fn: Callable):
     """Sets the record function to be used. If not set, the default hgraph.record will be used."""
@@ -97,11 +104,16 @@ def set_replay_function(fn: Callable):
 def get_record_function():
     return _RECORD_FUNCTION if _RECORD_FUNCTION is not None else record
 
+
 def get_replay_function():
     return _REPLAY_FUNCTION if _REPLAY_FUNCTION is not None else replay
 
-def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str = None,
-               overloads: Callable = None) -> GRAPH_SIGNATURE:
+
+def recordable(
+        fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str = None, overloads: Callable = None,
+        track_as_of: bool = None, track_removes: bool = None, partition_keys: Sequence[str] = None,
+        remove_partition_keys: Sequence[str] = None
+) -> GRAPH_SIGNATURE:
     """
     Wraps a graph so that it can be recorded or replayed. This will make use of configuration to determine if the
     graph should be recorded, replayed, or neither.
@@ -132,10 +144,17 @@ def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str =
             set_table_schema_date_key("date")
             evaluate_graph(strategy, GraphConfiguration(start_time=datetime(2000, 1, 1), end_time=datetime(2020, 1, 1)))
 
+    NOTE: The track_as_of, track_removes, partition_keys, and remove_partition_keys are only used if the recordable is
+    evaluated using a DATA_FRAME_RECORD_REPLAY record_replay_model.
+
     :param fn: The function to wrap.
     :param label: The unique label within the category provided.
     :param category: The category of the logic.
     :param overloads: Support to implement graph overloads using recordable tag.
+    :param track_as_of: Whether to track the as_of value for the recordable.
+    :param track_removes: Whether to track removes for the recordable.
+    :param partition_keys: The partition keys for the recordable.
+    :param remove_partition_keys: The remove partition keys for the recordable.
     :return: A graph component.
     """
 
@@ -171,6 +190,10 @@ def recordable(fn: GRAPH_SIGNATURE = None, *, label: str = None, category: str =
     )
     def wrapper(*args, **kwargs):
         recordable_id = f"{_RECORDING_PREFIX}.{category}"
+        # Set the data frame overrides to make use of for this recordable data item.
+        set_data_frame_overrides(key=label, recordable_id=recordable_id, track_as_of=track_as_of,
+                                 track_removes=track_removes, partition_keys=partition_keys,
+                                 remove_partition_keys=remove_partition_keys)
         if is_replayable(label, category):
             if not signature.output_type.is_resolved:
                 # In this case we must first attempt to resolve the output type.
