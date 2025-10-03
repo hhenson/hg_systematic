@@ -111,3 +111,10 @@ Version 0.0.39 (18-09-2025)
 ---------------------------
 
 * Add scenario and recordable support
+
+
+Version 0.0.44 (3-10-2025)
+--------------------------
+
+* Add support for recordable overrides
+
