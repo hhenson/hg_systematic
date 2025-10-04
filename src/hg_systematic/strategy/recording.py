@@ -160,7 +160,10 @@ def recordable(
 
     if fn is None:
         # If no fn is provided, then we are using this as a decorator and need to capture the fn in the second call
-        return lambda fn: recordable(fn, label=label, category=category, overloads=overloads)
+        return lambda fn: recordable(
+            fn, label=label, category=category, overloads=overloads, track_as_of=track_as_of,
+            track_removes=track_removes, partition_keys=partition_keys, remove_partition_keys=remove_partition_keys
+        )
 
     if not isinstance(fn, WiringNodeClass):
         # The fn is not a graph or node instance so wrap it in a graph.
