@@ -211,7 +211,7 @@ def needs_re_balance(
 
 
 # Check that the type includes the roll_period and roll_rounding values to be safe
-@graph(requires=lambda m, s: {"roll_period", "roll_rounding"}.issubset(m[ROLLING_CONFIG].meta_data_schema))
+@graph(requires=lambda m: {"roll_period", "roll_rounding"}.issubset(m[ROLLING_CONFIG].meta_data_schema))
 def get_monthly_rolling_values(config: TS[ROLLING_CONFIG]) -> TSB["roll_info": TSB[MonthlyRollingInfo],
                                                               "weights": TS[float]]:
     monthly_rolling_request = combine[TS[MonthlyRollingWeightRequest]](

@@ -34,7 +34,7 @@ INDEX_ROLL_FLOAT = TSB[_IndexRollingOutput[float]]
 INDEX_ROLL_STR = TSB[_IndexRollingOutput[str]]
 
 
-def symbol_is(symbol: str, sz: SIZE = Size[2]) -> Callable[[dict, dict], bool]:
+def symbol_is(symbol_: str, sz: SIZE = Size[2]) -> Callable[[dict, dict], bool]:
     """
     Used to match the ``requires`` rule in the ``overloads`` implementation
     For example:
@@ -45,7 +45,7 @@ def symbol_is(symbol: str, sz: SIZE = Size[2]) -> Callable[[dict, dict], bool]:
         def bcom_index_composition(symbol: str, dt: TS[date]) -> INDEX_ROLLING_OUTPUT:
             ...
     """
-    return lambda m, s: s["symbol"] == symbol
+    return lambda m, symbol: symbol == symbol_
 
 
 @operator

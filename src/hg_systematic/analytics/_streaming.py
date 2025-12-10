@@ -44,7 +44,7 @@ class _TimeSlopeState(CompoundScalar):
     sum_xy: float = 0.0
 
 
-@compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is True and s.get("window") is None)
+@compute_node(overloads=slope_of, requires=lambda m, fixed_interval, window: fixed_interval is True and window is None)
 def slope_of_fixed_interval_no_window(
     ts: TS[float],
     fixed_interval: bool = True,
@@ -87,7 +87,7 @@ def slope_of_fixed_interval_no_window(
         return slope
 
 
-@compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is True and isinstance(s.get("window"), int))
+@compute_node(overloads=slope_of, requires=lambda m, fixed_interval, window: fixed_interval is True and isinstance(window, int))
 def slope_of_fixed_interval_fixed_window(
     ts: TS[float],
     fixed_interval: bool = True,
@@ -147,7 +147,7 @@ def slope_of_fixed_interval_fixed_window(
         return slope
 
 
-@compute_node(overloads=slope_of, requires=lambda m, s: s.get("fixed_interval") is False and s.get("window") is None)
+@compute_node(overloads=slope_of, requires=lambda m, fixed_interval, window: fixed_interval is False and window is None)
 def slope_of_time_no_window(
     ts: TS[float],
     fixed_interval: bool = False,

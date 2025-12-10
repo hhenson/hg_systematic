@@ -77,7 +77,7 @@ class ARState(TimeSeriesSchema):
 
 
 @compute_node(
-    requires=lambda m, s: len(s["initial_values"]) == (order := s["order"]) and len(s["coefficients"]) == order + 1
+    requires=lambda m, initial_values, order, coefficients: len(initial_values) == order and len(coefficients) == order + 1
 )
 def _auto_regressive_generator(
         white_noise: TS[float],

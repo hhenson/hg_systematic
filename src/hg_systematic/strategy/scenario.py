@@ -128,7 +128,7 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
 
     wrapper.__name__ = signature.name
     wrapper.__doc__ = fn.fn.__doc__
-    wrapper = graph(wrapper, overloads=overloads, requires=lambda m, s, l=label: is_scenario_active(l))
+    wrapper = graph(wrapper, overloads=overloads, requires=lambda m: is_scenario_active(label))
 
     register_scenario(label, overloads, parameters)
 
@@ -164,6 +164,6 @@ def default_scenario(fn=None, *, overloads: Callable = None):
 
     wrapper.__name__ = signature.name
     wrapper.__doc__ = fn.fn.__doc__
-    wrapper = graph(wrapper, overloads=overloads, requires=lambda m, s, o=overloads: use_default_scenario(o))
+    wrapper = graph(wrapper, overloads=overloads, requires=lambda m: use_default_scenario(overloads))
 
     return wrapper
