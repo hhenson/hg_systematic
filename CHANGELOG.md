@@ -118,3 +118,8 @@ Version 0.0.44 (3-10-2025)
 
 * Add support for recordable overrides
 
+Version 0.0.46 (10-12-2025)
+---------------------------
+
+* Fixes to code to bring in line with new lambda syntax for requires and resolve.
+
