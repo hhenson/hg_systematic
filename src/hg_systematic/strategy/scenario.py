@@ -16,10 +16,22 @@ _ACTIVE_SCENARIOS = set()
 _ACTIVE_PARAMETERS = {}
 
 
+def _clear_overload_caches(overloads: set[Callable] | None = None):
+    """Clear hgraph overload caches that depend on scenario activation state."""
+    overloads = overloads or {o for overloads_ in _LBL_TO_OVERLOAD.values() for o in overloads_}
+    for overload in overloads:
+        overload_helper = getattr(overload, "_overload_helper", None)
+        if overload_helper is not None:
+            overload_helper.arg_count_cache.clear()
+            overload_helper.cached_overloads = 0
+
+
 def scenarios_to_evaluate(*labels: str | Callable):
     """Sets the active scenarios for the next evaluation."""
     global _ACTIVE_SCENARIOS
-    _ACTIVE_SCENARIOS.update(l if isinstance(l, str) else l.signature.name for l in labels)
+    labels = tuple(l if isinstance(l, str) else l.signature.name for l in labels)
+    _ACTIVE_SCENARIOS.update(labels)
+    _clear_overload_caches({overload for label in labels for overload in _LBL_TO_OVERLOAD.get(label, ())})
 
 
 def reset_scenarios():
@@ -27,6 +39,7 @@ def reset_scenarios():
     global _ACTIVE_SCENARIOS, _ACTIVE_PARAMETERS
     _ACTIVE_SCENARIOS = set()
     _ACTIVE_PARAMETERS = {}
+    _clear_overload_caches()
 
 
 def is_scenario_active(label: str) -> bool | str:
