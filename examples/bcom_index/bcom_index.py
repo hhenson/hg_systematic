@@ -50,7 +50,7 @@ def get_cims_for_year(year: int) -> Mapping[str, float]:
 
 
 @graph(overloads=index_composition, requires=symbol_is("BCOM Index"))
-def index_composition_bcom(symbol: str, dt: TS, calendar: HolidayCalendar) -> INDEX_ROLL_FLOAT:
+def index_composition_bcom(symbol: str, dt: TS[date], calendar: HolidayCalendar) -> INDEX_ROLL_FLOAT:
     y, m, _ = explode(dt)
     y_prev = y - 1
     get_cims = lift(get_cims_for_year, output=TSD[str, TS[float]])
@@ -72,7 +72,7 @@ def get_bcom_roll_schedule() -> Mapping[str, Mapping[int, tuple[int, int]]]:
 
 
 @graph(overloads=index_rolling_contracts, requires=symbol_is("BCOM Index"))
-def index_rolling_contracts_bcom(symbol: str, dt: TS, calendar: HolidayCalendar) -> INDEX_ROLL_STR:
+def index_rolling_contracts_bcom(symbol: str, dt: TS[date], calendar: HolidayCalendar) -> INDEX_ROLL_STR:
     rs = get_bcom_roll_schedule()
     roll_schedule = const(rs, TSD[str, TSD[int, TS[tuple[int, int]]]])
     fmt_str = const(fd({k: f"{k}{{month}}{{year:02d}} Comdty" for k in rs.keys()}), TSD[str, TS[str]])

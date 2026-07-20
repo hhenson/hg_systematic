@@ -27,6 +27,8 @@ def _price_in_dollars_static_impl(prices: Frame[StaticPriceSchema], round_to: in
     # available, however, in a dynamic implementation this would have a delay between the time of request to
     # value being available. This could have consequences when swapping out implementations.
     import polars as pl
+    if not hasattr(prices, "lazy"):
+        prices = pl.from_arrow(prices)
     prices = prices.lazy().sort(
         by="date"
     ).cast(

@@ -8,12 +8,12 @@ __all__ = ["recordable", "set_recording_prefix", "set_record_replay_state", "REC
 
 from typing import Callable, Any, TypeVar, Sequence
 
-from hgraph import OUT, graph, with_signature, DebugContext, replay, record
+from hgraph import graph, with_signature, DebugContext, replay, record
 from hgraph.adaptors.data_frame import set_data_frame_overrides
 
 from hg_systematic.strategy._wiring import as_graph, callable_signature, output_type_for
 
-GRAPH_SIGNATURE = TypeVar("GRAPH_SIGNATURE", bound=Callable[..., OUT | None])
+GRAPH_SIGNATURE = TypeVar("GRAPH_SIGNATURE", bound=Callable)
 
 _RECORDING_PREFIX = None
 
@@ -89,6 +89,13 @@ def is_recording(label: str, category: str) -> bool:
 
 _RECORD_FUNCTION = None
 _REPLAY_FUNCTION = None
+
+
+def _debug_context_active() -> bool:
+    """Use upstream's optional debug singleton without requiring it."""
+    instance = getattr(DebugContext, "instance", None)
+    context = instance() if instance is not None else None
+    return bool(context is not None and context.debug)
 
 
 def set_record_function(fn: Callable):
@@ -197,14 +204,14 @@ def recordable(
             except TypeError:
                 out = fn(*args, **kwargs)
                 tp = output_type_for(fn, out)
-            if DebugContext.instance() and DebugContext.instance().debug:
+            if _debug_context_active():
                 print(f"Replaying {recordable_id}.{label} with type: {tp}")
             # Replay the data, this will cause the fn to be wired out of the graph (and any nodes solely dependent on it
             return get_replay_function()(key=label, tp=tp, recordable_id=recordable_id)
         else:
             out = fn(*args, **kwargs)
             if is_recording(label, category):
-                if DebugContext.instance() and DebugContext.instance().debug:
+                if _debug_context_active():
                     print(f"Recording {recordable_id}.{label} with type: {out.output_type}")
                 get_record_function()(out, key=label, recordable_id=recordable_id)
             return out

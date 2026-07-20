@@ -57,7 +57,7 @@ class MonthlyRollingRange(TimeSeriesSchema):
 
 @dataclass
 class MonthlyRollingInfo(MonthlyRollingRange):
-    days_of_month: TS[tuple[date]]  # The dates within the month
+    days_of_month: TS[tuple[date, ...]]  # The dates within the month
     day_index: TS[int]  # The index within the days_of_month
     dt: TS[date]  # The date that the information represents
     # --- exploded values of date

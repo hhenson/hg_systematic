@@ -3,7 +3,7 @@ from typing import TypeVar, Callable
 
 from frozendict import frozendict
 from hgraph import graph, TSB, TS, map_, reduce, dedup, or_, and_, len_, DebugContext, combine, switch_, TS_SCHEMA, \
-    sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TS_SCHEMA_1, feedback, lag, \
+    sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TimeSeriesSchema, feedback, lag, \
     contains_, round_
 
 from hg_systematic.index.configuration import BaseIndexConfiguration, initial_structure_from_config, IndexConfiguration
@@ -17,6 +17,7 @@ __all__ = ["monthly_rolling_index", "ROLLING_CONFIG", "monthly_rolling_index_com
            "compute_level", "get_monthly_rolling_values", "needs_re_balance", "roll_units"]
 
 ROLLING_CONFIG = TypeVar("ROLLING_CONFIG", bound=IndexConfiguration)
+TS_SCHEMA_1 = TypeVar("TS_SCHEMA_1", bound=TimeSeriesSchema)
 
 
 @graph

@@ -52,7 +52,7 @@ def auto_regressive_generator(
         std_dev: float = 0.010,
         size: int = 1000,
 ) -> TS[float]:
-    """
+    r"""
     An autoregressive generator.  This will generate a sample each time the ``signal`` ticks.
     The generator takes the form of:
 
@@ -94,13 +94,13 @@ def _auto_regressive_generator(
     result = white_noise.value + coefficients[0]
     prev = _state.previous_terms.value
     result += sum(coefficients[i + 1] * prev[i] for i in range(order))
-    _state.previous_terms.apply_result((result,) + prev[1:])
+    _state.previous_terms.value = (result,) + prev[1:]
     return result
 
 
 @_auto_regressive_generator.start
 def autoregressive_generator_start(initial_values: tuple[float, ...], _state: RECORDABLE_STATE[ARState] = None):
-    _state.previous_terms.apply_result(initial_values)
+    _state.previous_terms.value = initial_values
 
 
 @compute_node

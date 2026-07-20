@@ -1,5 +1,11 @@
-from hgraph import TS, INT_OR_TIME_DELTA, operator, compute_node, STATE, CompoundScalar
 from collections import deque
+from datetime import timedelta
+from typing import TypeVar
+
+from hgraph import TS, operator, compute_node, STATE, CompoundScalar
+
+
+INT_OR_TIME_DELTA = TypeVar("INT_OR_TIME_DELTA", int, timedelta)
 
 
 @operator
@@ -48,7 +54,7 @@ class _TimeSlopeState(CompoundScalar):
 def slope_of_fixed_interval_no_window(
     ts: TS[float],
     fixed_interval: bool = True,
-    window: object = None,
+    window: INT_OR_TIME_DELTA = None,
     _state: STATE[_SlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:
@@ -91,7 +97,7 @@ def slope_of_fixed_interval_no_window(
 def slope_of_fixed_interval_fixed_window(
     ts: TS[float],
     fixed_interval: bool = True,
-    window: object = None,
+    window: INT_OR_TIME_DELTA = None,
     _state: STATE[_RollingSlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:
@@ -151,7 +157,7 @@ def slope_of_fixed_interval_fixed_window(
 def slope_of_time_no_window(
     ts: TS[float],
     fixed_interval: bool = False,
-    window: object = None,
+    window: INT_OR_TIME_DELTA = None,
     _state: STATE[_TimeSlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:
@@ -187,4 +193,3 @@ def slope_of_time_no_window(
 
     if not _output.valid or _output.value != slope:
         return slope
-

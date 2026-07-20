@@ -3,6 +3,7 @@ Scenarios allow for parameterised testing of strategies, where an operator can b
 of a strategy, but where different approaches can be taken to achieve the objective. This allows for creating different
 runs / scenarios to be evaluated without losing the overall shape of the strategy.
 """
+from inspect import signature as inspect_signature
 from typing import Callable, Sequence
 
 __all__ = ["scenario", "scenarios_to_evaluate", "reset_scenarios", "is_scenario_active", "use_default_scenario",
@@ -119,6 +120,7 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
 
     fn = as_graph(fn)
     signature = callable_signature(fn)
+    python_signature = inspect_signature(fn)
     if label is None:
         label = signature.name
 
@@ -130,8 +132,9 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
     )
     def wrapper(*args, **kwargs):
         parameters = get_active_parameters(label)
-        kwargs.update(parameters)
-        return fn(*args, **kwargs)
+        bound = python_signature.bind_partial(*args, **kwargs)
+        bound.arguments.update(parameters)
+        return fn(*bound.args, **bound.kwargs)
 
     wrapper.__name__ = signature.name
     wrapper.__doc__ = fn.__doc__
