@@ -553,7 +553,7 @@ requires-dist = [
     { name = "coverage", marker = "extra == 'test'" },
     { name = "frozendict", specifier = ">=2.3.10" },
     { name = "hg-oap", specifier = ">=0.1.13" },
-    { name = "hgraph", specifier = ">=0.5.25" },
+    { name = "hgraph", specifier = ">=0.5.26" },
     { name = "importlib-resources" },
     { name = "matplotlib" },
     { name = "mypy", marker = "extra == 'test'" },
@@ -575,7 +575,7 @@ provides-extras = ["docs", "test"]
 
 [[package]]
 name = "hgraph"
-version = "0.5.25"
+version = "0.5.26"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "black" },
@@ -593,12 +593,12 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/77/b4ee4931696a6acf3d1e00be3bce84b0dadfc828fa8ab7fcbdbf46c08f27/hgraph-0.5.25.tar.gz", hash = "sha256:d742fb5484d5287ff63e86730722d531ab6609effdc53a263421ca800d289fcc", size = 5488276, upload-time = "2026-07-19T17:38:34.078Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/52/11/bb1cdd2b89ee4c61735d05680fce4c966e5a52f2f797621a33684cd6f860/hgraph-0.5.26.tar.gz", hash = "sha256:51c9a342fa38daa72ee0c7ba66754bb887074c2dc2b399640927ea10182ddd4f", size = 5488548, upload-time = "2026-07-20T07:14:54.717Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/70/fe/c3230434d85b0cdf277f41139e00e5ab7d6da37394e0ced35871855eac3a/hgraph-0.5.25-cp312-abi3-macosx_15_0_arm64.whl", hash = "sha256:ad187beb64af659c2c9f70c318a07b6149ab8b103b9ff9c4dac31c0646546cca", size = 1466983, upload-time = "2026-07-19T17:38:28.162Z" },
-    { url = "https://files.pythonhosted.org/packages/f1/d3/ceb95a58873dd3e36c295c3cb4a54e38af78f31a54ec0f3df7a440669324/hgraph-0.5.25-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:5bbebffb72f1aa837f46d96bb861810edc3c21818679c4695e42d14bc1ac9d37", size = 1749876, upload-time = "2026-07-19T17:38:29.897Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/42/de82ced4127c7f8b3e2b691bfd845a96f94c0c91c8a3ed469b37815a112a/hgraph-0.5.25-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:9e6706ffc2b97ba6ef503412d55a47759a9c9e355adfa916e8556c3fac0fc705", size = 2232414, upload-time = "2026-07-19T17:38:31.289Z" },
-    { url = "https://files.pythonhosted.org/packages/e6/75/12ba5424b80a7962294295fc3790872d03384442f89e860bd0fa8c8f49e0/hgraph-0.5.25-cp312-abi3-win_amd64.whl", hash = "sha256:0c731ac05e9f87e1fb5ff64e24e42a12b4e1cd1299c5957307544bdc7bd688b9", size = 1636655, upload-time = "2026-07-19T17:38:32.663Z" },
+    { url = "https://files.pythonhosted.org/packages/00/ff/814e419a1f5578bf26e006d91659b710fe51950a3996506d7aa73bde2cbe/hgraph-0.5.26-cp312-abi3-macosx_15_0_arm64.whl", hash = "sha256:4eb34bf61b1f13e73e8cee189084f1cf62ba7ad4a087e07ed983510d4fdbcf9b", size = 1467051, upload-time = "2026-07-20T07:14:45.742Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/13/1d993f398dad5d4fdb7dbdd0574275e7e429e5f531d074f7b6c573bc5ef8/hgraph-0.5.26-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e1813f34c20966893484a4a6b92c592fbf57649b0410dd38cea1480da7019328", size = 1749944, upload-time = "2026-07-20T07:14:48.121Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/59/46a67efea584257527a55900906050f01629cd2c1dc3db5b5439539f18f2/hgraph-0.5.26-cp312-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:29cc287e667313a077cba2034f5cba5677669559c388ae9fab0c6b2951744851", size = 2232485, upload-time = "2026-07-20T07:14:49.949Z" },
+    { url = "https://files.pythonhosted.org/packages/fa/d5/2a798457f023cb5c2326e8e8c7f62c708ba62ed44e0fa811f668d8e73c83/hgraph-0.5.26-cp312-abi3-win_amd64.whl", hash = "sha256:2375b8c71e1694b0c92fd035b79ba2845eb223a995fe6a63e1b85d69b4f72f10", size = 1636724, upload-time = "2026-07-20T07:14:51.654Z" },
 ]
 
 [package.optional-dependencies]
