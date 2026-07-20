@@ -39,3 +39,30 @@ def test_scenario_decorator():
     scenarios_to_evaluate("my_op_add_two")
     assert eval_node(g, [1, 2, 3]) == [3, 4, 5]
 
+
+def test_scenario_accepts_an_existing_graph_and_preserves_keyword_inputs():
+    @operator
+    def local_op(ts: TS[int], *, extra: int = 0) -> TS[int]:
+        ...
+
+    @graph
+    def implementation(ts: TS[int], *, extra: int = 0) -> TS[int]:
+        return ts + extra
+
+    selected = scenario(
+        implementation,
+        label="existing_graph",
+        overloads=local_op,
+        parameters=("extra",),
+    )
+
+    @graph
+    def app(ts: TS[int]) -> TS[int]:
+        return local_op(ts)
+
+    try:
+        scenarios_to_evaluate("existing_graph")
+        set_parameters("existing_graph", extra=2)
+        assert eval_node(app, [1, 2]) == [3, 4]
+    finally:
+        reset_scenarios()

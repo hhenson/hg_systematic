@@ -69,7 +69,7 @@ build-backend = "hatchling.build"
 # Configure pytest
 [tool.pytest.ini_options]
 minversion = "7.4.3"
-adopts = "-s" #addopts = "-n 4 -ra -q --dist=loadscope" # " --cov=hgraph --cov-report=term-missing --cov-report=xml"
+addopts = "-s" # "-n 4 -ra -q --dist=loadscope" # " --cov=hgraph --cov-report=term-missing --cov-report=xml"
 testpaths = [
     "tests",
 ]

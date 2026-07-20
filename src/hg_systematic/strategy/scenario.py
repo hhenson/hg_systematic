@@ -8,7 +8,9 @@ from typing import Callable, Sequence
 __all__ = ["scenario", "scenarios_to_evaluate", "reset_scenarios", "is_scenario_active", "use_default_scenario",
            "register_scenario", "set_parameters", "get_active_parameters", "default_scenario",]
 
-from hgraph import WiringNodeClass, graph, with_signature
+from hgraph import graph, with_signature
+
+from hg_systematic.strategy._wiring import as_graph, callable_signature
 
 _SCENARIOS = {}
 _LBL_TO_OVERLOAD = {}
@@ -29,7 +31,7 @@ def _clear_overload_caches(overloads: set[Callable] | None = None):
 def scenarios_to_evaluate(*labels: str | Callable):
     """Sets the active scenarios for the next evaluation."""
     global _ACTIVE_SCENARIOS
-    labels = tuple(l if isinstance(l, str) else l.signature.name for l in labels)
+    labels = tuple(l if isinstance(l, str) else l.__name__ for l in labels)
     _ACTIVE_SCENARIOS.update(labels)
     _clear_overload_caches({overload for label in labels for overload in _LBL_TO_OVERLOAD.get(label, ())})
 
@@ -59,7 +61,7 @@ def register_scenario(label: str, overloads: Callable = None, parameters: Sequen
     """Registers a scenario."""
     global _SCENARIOS, _LBL_TO_OVERLOAD
     if label in _LBL_TO_OVERLOAD and overloads in _LBL_TO_OVERLOAD[label]:
-        raise ValueError(f"Scenario label {label} already registered for overload: {overloads.signature.signature}.")
+        raise ValueError(f"Scenario label {label} already registered for overload: {overloads.__name__}.")
     _LBL_TO_OVERLOAD.setdefault(label, set()).add(overloads)
     _SCENARIOS.setdefault(overloads, {})[label] = parameters or []
 
@@ -68,7 +70,7 @@ def set_parameters(label: str | Callable, **kwargs):
     """Sets the parameters for a scenario."""
     global _ACTIVE_PARAMETERS, _LBL_TO_OVERLOAD, _SCENARIOS
     if not isinstance(label, str):
-        label = label.signature.name
+        label = label.__name__
     overloads = _LBL_TO_OVERLOAD[label]
     assert len(overloads) >= 1, f"Expected at least 1 overload for scenario label {label}"
     # All overloads using the same scenario label must use the same parameters,
@@ -115,24 +117,16 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
     if fn is None:
         return lambda fn: scenario(fn, label=label, overloads=overloads, parameters=parameters)
 
-    if not isinstance(fn, WiringNodeClass):
-        # The fn is not a graph or node instance so wrap it in a graph.
-        fn = graph(fn)
-
-    signature = fn.signature
+    fn = as_graph(fn)
+    signature = callable_signature(fn)
     if label is None:
         label = signature.name
 
-    non_auto_resolve = fn.signature.non_autoresolve_inputs
-    pos_inputs = {k: v for k, v in fn.signature.positional_inputs.items() if k in non_auto_resolve}
-    kw_inputs = {k: v for k, v in fn.signature.kw_only_inputs.items() if k in non_auto_resolve}
-    defaults = {k: v for k, v in fn.signature.defaults.items() if k in non_auto_resolve and v is not None}
-
     @with_signature(
-        args=pos_inputs,
-        kwargs=kw_inputs,
-        defaults=defaults,
-        return_annotation=fn.signature.output_type
+        args=signature.positional_inputs,
+        kwargs=signature.keyword_inputs,
+        defaults=signature.defaults,
+        return_annotation=signature.output_type,
     )
     def wrapper(*args, **kwargs):
         parameters = get_active_parameters(label)
@@ -140,7 +134,7 @@ def scenario(fn=None, *, label: str = None, overloads: Callable = None, paramete
         return fn(*args, **kwargs)
 
     wrapper.__name__ = signature.name
-    wrapper.__doc__ = fn.fn.__doc__
+    wrapper.__doc__ = fn.__doc__
     wrapper = graph(wrapper, overloads=overloads, requires=lambda m: is_scenario_active(label))
 
     register_scenario(label, overloads, parameters)
@@ -155,28 +149,20 @@ def default_scenario(fn=None, *, overloads: Callable = None):
     if fn is None:
         return lambda fn: default_scenario(fn, overloads=overloads)
 
-    if not isinstance(fn, WiringNodeClass):
-        # The fn is not a graph or node instance so wrap it in a graph.
-        fn = graph(fn)
-
-    signature = fn.signature
-
-    non_auto_resolve = signature.non_autoresolve_inputs
-    pos_inputs = {k: v for k, v in signature.positional_inputs.items() if k in non_auto_resolve}
-    kw_inputs = {k: v for k, v in signature.kw_only_inputs.items() if k in non_auto_resolve}
-    defaults = {k: v for k, v in signature.defaults.items() if k in non_auto_resolve and v is not None}
+    fn = as_graph(fn)
+    signature = callable_signature(fn)
 
     @with_signature(
-        args=pos_inputs,
-        kwargs=kw_inputs,
-        defaults=defaults,
-        return_annotation=signature.output_type
+        args=signature.positional_inputs,
+        kwargs=signature.keyword_inputs,
+        defaults=signature.defaults,
+        return_annotation=signature.output_type,
     )
     def wrapper(*args, **kwargs):
         return fn(*args, **kwargs)
 
     wrapper.__name__ = signature.name
-    wrapper.__doc__ = fn.fn.__doc__
+    wrapper.__doc__ = fn.__doc__
     wrapper = graph(wrapper, overloads=overloads, requires=lambda m: use_default_scenario(overloads))
 
     return wrapper

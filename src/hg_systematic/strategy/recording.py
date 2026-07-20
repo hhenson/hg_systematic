@@ -8,8 +8,10 @@ __all__ = ["recordable", "set_recording_prefix", "set_record_replay_state", "REC
 
 from typing import Callable, Any, TypeVar, Sequence
 
-from hgraph import OUT, WiringNodeClass, graph, with_signature, DebugContext, replay, record
+from hgraph import OUT, graph, with_signature, DebugContext, replay, record
 from hgraph.adaptors.data_frame import set_data_frame_overrides
+
+from hg_systematic.strategy._wiring import as_graph, callable_signature, output_type_for
 
 GRAPH_SIGNATURE = TypeVar("GRAPH_SIGNATURE", bound=Callable[..., OUT | None])
 
@@ -165,11 +167,8 @@ def recordable(
             track_removes=track_removes, partition_keys=partition_keys, remove_partition_keys=remove_partition_keys
         )
 
-    if not isinstance(fn, WiringNodeClass):
-        # The fn is not a graph or node instance so wrap it in a graph.
-        fn = graph(fn)
-
-    signature = fn.signature  # Since this is a WiringNodeClass now
+    fn = as_graph(fn)
+    signature = callable_signature(fn)
     if no_label := label is None:
         label = signature.name
     if category is None and "_" in signature.name:
@@ -180,16 +179,11 @@ def recordable(
     if category is None:
         raise ValueError("Must provide a category or label for recordable (or include '_' in the function name).")
 
-    non_auto_resolve = signature.non_autoresolve_inputs
-    pos_inputs = {k: v for k, v in signature.positional_inputs.items() if k in non_auto_resolve}
-    kw_inputs = {k: v for k, v in signature.kw_only_inputs.items() if k in non_auto_resolve}
-    defaults = {k: v for k, v in signature.defaults.items() if k in non_auto_resolve and v is not None}
-
     @with_signature(
-        args=pos_inputs,
-        kwargs=kw_inputs,
-        defaults=defaults,
-        return_annotation=signature.output_type
+        args=signature.positional_inputs,
+        kwargs=signature.keyword_inputs,
+        defaults=signature.defaults,
+        return_annotation=signature.output_type,
     )
     def wrapper(*args, **kwargs):
         recordable_id = f"{_RECORDING_PREFIX}.{category}"
@@ -198,18 +192,15 @@ def recordable(
                                  track_removes=track_removes, partition_keys=partition_keys,
                                  remove_partition_keys=remove_partition_keys)
         if is_replayable(label, category):
-            if not signature.output_type.is_resolved:
-                # In this case we must first attempt to resolve the output type.
+            try:
+                tp = output_type_for(fn)
+            except TypeError:
                 out = fn(*args, **kwargs)
-                tp = out.output_type
-                if not tp.is_resolved:
-                    raise ValueError(f"Cannot record output type {tp} for {fn} as it is not resolved.")
-            else:
-                tp = signature.output_type
+                tp = output_type_for(fn, out)
             if DebugContext.instance() and DebugContext.instance().debug:
                 print(f"Replaying {recordable_id}.{label} with type: {tp}")
             # Replay the data, this will cause the fn to be wired out of the graph (and any nodes solely dependent on it
-            return get_replay_function()(key=label, tp=tp.py_type, recordable_id=recordable_id)
+            return get_replay_function()(key=label, tp=tp, recordable_id=recordable_id)
         else:
             out = fn(*args, **kwargs)
             if is_recording(label, category):
@@ -219,7 +210,7 @@ def recordable(
             return out
 
     wrapper.__name__ = signature.name
-    wrapper.__doc__ = fn.fn.__doc__
+    wrapper.__doc__ = fn.__doc__
     wrapper = graph(wrapper, overloads=overloads)
 
     return wrapper
