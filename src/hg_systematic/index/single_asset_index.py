@@ -88,7 +88,7 @@ def rolling_contract(config: TS[MonthlySingleAssetIndexConfiguration], asset: TS
 
 
 @graph(overloads=rolling_contract)
-def rolling_spread_contract(config: TS[MonthlySingleAssetIndexConfiguration], asset: TS[str],
+def rolling_spread_contract(config: TS[MonthlySpreadSingleAssetIndexConfiguration], asset: TS[str],
                      roll_info: TSB[MonthlyRollingInfo]) -> TSL[TS[str], Size[2]]:
     roll_schedule = roll_schedule_to_tsd(config.roll_schedule)
     far_roll_schedule = roll_schedule_to_tsd(config.far_leg_roll_schedule)

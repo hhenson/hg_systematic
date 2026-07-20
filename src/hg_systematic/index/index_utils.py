@@ -3,8 +3,9 @@ from typing import TypeVar, Callable
 
 from frozendict import frozendict
 from hgraph import graph, TSB, TS, map_, reduce, dedup, or_, and_, len_, DebugContext, combine, switch_, TS_SCHEMA, \
-    sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, TimeSeriesSchema, feedback, lag, \
+    sample, default, gate, not_, if_then_else, CmpResult, no_key, const, AUTO_RESOLVE, feedback, lag, \
     contains_, round_
+from hgraph.reflection import fields
 
 from hg_systematic.index.configuration import BaseIndexConfiguration, initial_structure_from_config, IndexConfiguration
 from hg_systematic.index.pricing_service import IndexResult
@@ -17,7 +18,6 @@ __all__ = ["monthly_rolling_index", "ROLLING_CONFIG", "monthly_rolling_index_com
            "compute_level", "get_monthly_rolling_values", "needs_re_balance", "roll_units"]
 
 ROLLING_CONFIG = TypeVar("ROLLING_CONFIG", bound=IndexConfiguration)
-TS_SCHEMA_1 = TypeVar("TS_SCHEMA_1", bound=TimeSeriesSchema)
 
 
 @graph
@@ -27,8 +27,7 @@ def monthly_rolling_index(
         compute_target_units_fn: Callable[[TSB[TS_SCHEMA]], NotionalUnitValues],
         re_balance_signal_fn: Callable[[TSB[TS_SCHEMA]], TS[bool]] = None,
         _config_tp: type[ROLLING_CONFIG] = AUTO_RESOLVE,
-        _kwargs_tp: type[TS_SCHEMA_1] = AUTO_RESOLVE,
-        **kwargs: TSB[TS_SCHEMA_1]
+        **kwargs: TSB[TS_SCHEMA]
 ) -> TSB[IndexResult]:
     """
     Provide the wrapper for wiring in the required data sources for the monthly_rolling_index_component.
@@ -49,13 +48,11 @@ def monthly_rolling_index(
     :param compute_target_units_fn: A function that computes the target units for re-balancing.
     :param re_balance_signal_fn: A function that returns a signal to filter the monthly re-balance signal.
     :param _config_tp: The type of the config, will AUTO_RESOLVE not to be supplied.
-    :param _kwargs_tp: The type of the kwargs, will AUTO_RESOLVE not to be supplied.
     """
-    cfg_schema = _config_tp.__meta_data_schema__
-    kwargs_schema = _kwargs_tp.__meta_data_schema__
+    cfg_schema = fields(_config_tp)
 
-    if "roll_info" in kwargs_schema:
-        if "roll_weight" not in kwargs_schema:
+    if "roll_info" in kwargs:
+        if "roll_weight" not in kwargs:
             raise ValueError("roll_info is provided, but roll_weight is not.")
         roll_info = kwargs["roll_info"]
         roll_weight = kwargs["roll_weight"]
@@ -65,7 +62,7 @@ def monthly_rolling_index(
     # If a custom halt_trading signal is provided, use it, alternatively if the config has a trading_halt_calendar
     # use that to feed into a simple ``contains`` filter. Finally, if no other strategy is provided, assume no halt signal
     # and wire in False.
-    halt_trading = kwargs.halt_trading if "halt_trading" in kwargs_schema else \
+    halt_trading = kwargs["halt_trading"] if "halt_trading" in kwargs else \
         _halt_with_calendar(config, roll_info.dt) if "trading_halt_calendar" in cfg_schema else \
                   const(False)
     DebugContext.print("halt_trading", halt_trading)
@@ -91,7 +88,7 @@ def monthly_rolling_index(
         halt_trading,
         re_balance_signal_fn=re_balance_signal_fn,
         compute_target_units_fn=compute_target_units_fn,
-        **{k: kwargs[k] for k in kwargs_schema if k not in {"halt_trading", "roll_info", "roll_weight"}}
+        **{k: value for k, value in kwargs.items() if k not in {"halt_trading", "roll_info", "roll_weight"}}
     )
 
     # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
@@ -212,7 +209,7 @@ def needs_re_balance(
 
 
 # Check that the type includes the roll_period and roll_rounding values to be safe
-@graph(requires=lambda m: {"roll_period", "roll_rounding"}.issubset(m[ROLLING_CONFIG].meta_data_schema))
+@graph(requires=lambda m: {"roll_period", "roll_rounding"}.issubset(fields(m[ROLLING_CONFIG])))
 def get_monthly_rolling_values(config: TS[ROLLING_CONFIG]) -> TSB["roll_info": TSB[MonthlyRollingInfo],
                                                               "weights": TS[float]]:
     monthly_rolling_request = combine[TS[MonthlyRollingWeightRequest]](
