@@ -54,7 +54,7 @@ class _TimeSlopeState(CompoundScalar):
 def slope_of_fixed_interval_no_window(
     ts: TS[float],
     fixed_interval: bool = True,
-    window: INT_OR_TIME_DELTA = None,
+    window: object = None,
     _state: STATE[_SlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:
@@ -97,7 +97,7 @@ def slope_of_fixed_interval_no_window(
 def slope_of_fixed_interval_fixed_window(
     ts: TS[float],
     fixed_interval: bool = True,
-    window: INT_OR_TIME_DELTA = None,
+    window: object = None,
     _state: STATE[_RollingSlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:
@@ -157,7 +157,7 @@ def slope_of_fixed_interval_fixed_window(
 def slope_of_time_no_window(
     ts: TS[float],
     fixed_interval: bool = False,
-    window: INT_OR_TIME_DELTA = None,
+    window: object = None,
     _state: STATE[_TimeSlopeState] = None,
     _output: TS[float] = None,
 ) -> TS[float]:

@@ -50,9 +50,10 @@ def monthly_rolling_index(
     :param _config_tp: The type of the config, will AUTO_RESOLVE not to be supplied.
     """
     cfg_schema = fields(_config_tp)
+    kwargs_schema = fields(kwargs)
 
-    if "roll_info" in kwargs:
-        if "roll_weight" not in kwargs:
+    if "roll_info" in kwargs_schema:
+        if "roll_weight" not in kwargs_schema:
             raise ValueError("roll_info is provided, but roll_weight is not.")
         roll_info = kwargs["roll_info"]
         roll_weight = kwargs["roll_weight"]
@@ -62,7 +63,7 @@ def monthly_rolling_index(
     # If a custom halt_trading signal is provided, use it, alternatively if the config has a trading_halt_calendar
     # use that to feed into a simple ``contains`` filter. Finally, if no other strategy is provided, assume no halt signal
     # and wire in False.
-    halt_trading = kwargs["halt_trading"] if "halt_trading" in kwargs else \
+    halt_trading = kwargs["halt_trading"] if "halt_trading" in kwargs_schema else \
         _halt_with_calendar(config, roll_info.dt) if "trading_halt_calendar" in cfg_schema else \
                   const(False)
     DebugContext.print("halt_trading", halt_trading)
@@ -88,7 +89,7 @@ def monthly_rolling_index(
         halt_trading,
         re_balance_signal_fn=re_balance_signal_fn,
         compute_target_units_fn=compute_target_units_fn,
-        **{k: value for k, value in kwargs.items() if k not in {"halt_trading", "roll_info", "roll_weight"}}
+        **{k: kwargs[k] for k in kwargs_schema if k not in {"halt_trading", "roll_info", "roll_weight"}}
     )
 
     # There is a dedup here as there seems to be a bug somewhere when dealing with REFs and TSD, will trace down later.
