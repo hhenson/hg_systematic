@@ -1,6 +1,6 @@
 [project]
 name = "hg_systematic"
-version = "0.1.0"
+version = "0.2.0"
 description = "A library and examples to show how HGraph can be used for systematic trading."
 readme = "README.md"
 license = {text = "MIT"}
@@ -22,8 +22,8 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     #"hgraph>=0.5.26",
-    "hg_cpp>=0.4.1",
-    "hg_oap>=0.2.0",
+    "hg_cpp>=0.4.5",
+    "hg_oap>=0.3.0",
     "frozendict>=2.3.10",
     "sortedcontainers>=2.4.0",
     "ordered-set>=4.1.0",
