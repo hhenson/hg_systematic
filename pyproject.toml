@@ -21,8 +21,8 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    #"hgraph>=0.5.26",
-    "hg_cpp>=0.4.5",
+    # "hgraph>=0.5.30",  # Python runtime alternative to hg_cpp
+    "hg_cpp>=0.4.7",
     "hg_oap>=0.3.0",
     "frozendict>=2.3.10",
     "sortedcontainers>=2.4.0",
