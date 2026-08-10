@@ -402,13 +402,13 @@ wheels = [
 
 [[package]]
 name = "hg-systematic"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "antlr4-python3-runtime" },
     { name = "frozendict" },
-    { name = "hg-cpp" },
     { name = "hg-oap" },
+    { name = "hgraph" },
     { name = "importlib-resources" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -439,8 +439,8 @@ requires-dist = [
     { name = "antlr4-python3-runtime" },
     { name = "coverage", marker = "extra == 'test'" },
     { name = "frozendict", specifier = ">=2.3.10" },
-    { name = "hg-cpp", specifier = ">=0.4.7" },
     { name = "hg-oap", specifier = ">=0.3.0" },
+    { name = "hgraph", specifier = ">=0.5.41" },
     { name = "importlib-resources" },
     { name = "matplotlib" },
     { name = "mypy", marker = "extra == 'test'" },
@@ -459,6 +459,22 @@ requires-dist = [
     { name = "sphinxcontrib-plantuml", marker = "extra == 'docs'", specifier = ">=0.30" },
 ]
 provides-extras = ["docs", "test"]
+
+[[package]]
+name = "hgraph"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "frozendict" },
+    { name = "numpy" },
+    { name = "pyarrow" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/1a/d67b84a8768c89f60c74fc454fdb49f10be2ed824c36ca443b83e200b274/hgraph-0.8.0.tar.gz", hash = "sha256:49af25f9ce3643780b3e657d3ca43a54452b42852f8a29d3de6c467814dbbe6f", size = 2859042, upload-time = "2026-08-09T05:21:00.42Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/cf/056eb082eb90cb213198587b22b912ac60abbc43a5ebe13173479a6b14f8/hgraph-0.8.0-cp312-abi3-macosx_15_0_arm64.whl", hash = "sha256:e4112263d03aa836d25f68365e18fcb7c5ff879d9e6e5d067a72af99e5aae42d", size = 7968550, upload-time = "2026-08-09T05:20:53.317Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/64/01e345922ac6851ab4ecdf779e82fc91c10af2fb91eb4a4b396361d45ca8/hgraph-0.8.0-cp312-abi3-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d43611c6f7d38055cda2c877be4014d8eece28b46e7653ecdf92259a9267832d", size = 8355847, upload-time = "2026-08-09T05:20:55.601Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/ba/cd44618e0c7293b81f953f8ffd67a3030cefa7a09150c98a0cce0dbc3934/hgraph-0.8.0-cp312-abi3-win_amd64.whl", hash = "sha256:ab7d37a4701e16d6604cb5418f8323de2bb06613d17271757fc4e6391ede43cd", size = 16829614, upload-time = "2026-08-09T05:20:58.209Z" },
+]
 
 [[package]]
 name = "holidays"
