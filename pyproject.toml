@@ -22,7 +22,7 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     "hgraph>=0.5.41",
-    "hg_oap>=0.3.0",
+    "hg_oap>=0.3.2",
     "frozendict>=2.3.10",
     "sortedcontainers>=2.4.0",
     "ordered-set>=4.1.0",
